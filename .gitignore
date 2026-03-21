@@ -9,7 +9,7 @@ __pycache__/
 node_modules/
 dist/
 
-# Data files
+#FHIR
 data/fhir
 
 # IDE
