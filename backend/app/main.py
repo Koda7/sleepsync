@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
 from .config import ALLOWED_ORIGINS
 from .database import engine, Base
 from .routers import sleep_logs, fhir
 
+load_dotenv()
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SleepSync API", version="0.1.0")
