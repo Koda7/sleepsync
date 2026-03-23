@@ -29,10 +29,10 @@ export default function SleepLog() {
     e.preventDefault();
     setStatus("submitting");
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/sleep-logs/", {
+      const res = await fetch("/api/sleep-logs/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, patient_id: "1" }),
+        body: JSON.stringify({ ...form, patient_id: "592912" }),
       });
       if (!res.ok) throw new Error();
       setStatus("success");
