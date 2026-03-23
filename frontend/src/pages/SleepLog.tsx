@@ -19,7 +19,7 @@ export default function SleepLog() {
     woke_during_night: false,
     trouble_falling_asleep: false,
     woke_too_early: false,
-    stress_level: 5,
+    stress_level: 3,
     notes: "",
   });
 
@@ -141,12 +141,12 @@ export default function SleepLog() {
         {/* Stress level */}
         <div>
           <label className="block text-sm font-medium mb-1">
-            Stress Level: <span className="text-indigo-400">{form.stress_level}/10</span>
+            Stress Level: <span className="text-indigo-400">{form.stress_level}/5</span>
           </label>
           <input
             type="range"
             min={1}
-            max={10}
+            max={5}
             step={1}
             value={form.stress_level}
             onChange={(e) => setForm({ ...form, stress_level: Number(e.target.value) })}
