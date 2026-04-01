@@ -5,16 +5,22 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "sqlite:///./sleepsync_dev.db",
 )
+# Render gives postgres:// but SQLAlchemy 2.x requires postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 FHIR_BASE_URL = os.getenv(
     "FHIR_BASE_URL",
     "https://hapi.fhir.org/baseR4",
 ).rstrip("/")
 
-# Seconds; used by the FHIR HTTP client (search bundles can paginate slowly on public sandboxes).
 FHIR_TIMEOUT = float(os.getenv("FHIR_TIMEOUT", "30"))
 
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
 ]
+
+_extra_origins = os.getenv("ALLOWED_ORIGINS", "")
+if _extra_origins:
+    ALLOWED_ORIGINS.extend(o.strip() for o in _extra_origins.split(",") if o.strip())
