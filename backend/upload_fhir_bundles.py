@@ -42,20 +42,27 @@ def rewrite_refs(obj, urn_map):
             rewrite_refs(item, urn_map)
 
 
+def _is_bad_ref(ref_str):
+    """Return True for references HAPI won't resolve (urn:uuid, conditional queries, etc.)."""
+    if not isinstance(ref_str, str):
+        return False
+    return ref_str.startswith("urn:uuid:") or "?" in ref_str
+
+
 def strip_dangling_refs(obj):
-    """Recursively remove any dict that contains a urn:uuid: reference we couldn't resolve."""
+    """Recursively remove any reference HAPI can't resolve."""
     if isinstance(obj, dict):
         drop_keys = []
         for key, val in obj.items():
             if isinstance(val, dict):
-                if "reference" in val and isinstance(val["reference"], str) and val["reference"].startswith("urn:uuid:"):
+                if "reference" in val and _is_bad_ref(val["reference"]):
                     drop_keys.append(key)
                 else:
                     strip_dangling_refs(val)
             elif isinstance(val, list):
                 obj[key] = [
                     item for item in val
-                    if not (isinstance(item, dict) and isinstance(item.get("reference"), str) and item["reference"].startswith("urn:uuid:"))
+                    if not (isinstance(item, dict) and _is_bad_ref(item.get("reference")))
                 ]
                 for item in obj[key]:
                     strip_dangling_refs(item)
