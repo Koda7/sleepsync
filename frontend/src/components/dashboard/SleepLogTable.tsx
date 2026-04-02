@@ -7,7 +7,8 @@ type Props = {
 };
 
 function formatTimestamp(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
+  const utc = iso.endsWith("Z") ? iso : iso + "Z";
+  return new Date(utc).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
