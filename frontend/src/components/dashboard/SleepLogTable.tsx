@@ -6,15 +6,13 @@ type Props = {
   formatDate: (iso: string) => string;
 };
 
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+function formatTimestamp(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export default function SleepLogTable({ logs, onDelete, formatDate }: Props) {
@@ -40,7 +38,7 @@ export default function SleepLogTable({ logs, onDelete, formatDate }: Props) {
               <tr key={log.id} className="border-b border-zinc-800 text-zinc-300 group">
                 <td className="py-2 pr-4">
                   <span>{formatDate(log.date)}</span>
-                  <span className="block text-[11px] text-zinc-500">{timeAgo(log.created_at)}</span>
+                  <span className="block text-[11px] text-zinc-500">Logged {formatTimestamp(log.created_at)}</span>
                 </td>
                 <td className="py-2 pr-4">{log.hours_slept}</td>
                 <td className="py-2 pr-4">{log.quality}</td>
