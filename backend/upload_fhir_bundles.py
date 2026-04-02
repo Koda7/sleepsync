@@ -99,6 +99,7 @@ for filepath in files:
         continue
 
     ok = 0
+    first_fail_dumped = False
     for resource in resources:
         rtype = resource["resourceType"]
         rid = resource["id"]
@@ -107,8 +108,24 @@ for filepath in files:
             ok += 1
         else:
             failed += 1
-            detail = resp.text[:150] if resp.text else str(resp.status_code)
-            print(f"  FAIL {rtype}/{rid} -- {resp.status_code}: {detail}")
+            print(f"  FAIL {rtype}/{rid} -- {resp.status_code}")
+            if not first_fail_dumped:
+                first_fail_dumped = True
+                try:
+                    outcome = resp.json()
+                    issues = outcome.get("issue", [])
+                    for issue in issues[:3]:
+                        sev = issue.get("severity", "?")
+                        diag = issue.get("diagnostics", "no details")
+                        loc = issue.get("location", [])
+                        print(f"    [{sev}] {diag}")
+                        if loc:
+                            print(f"    location: {loc}")
+                except Exception:
+                    print(f"    raw: {resp.text[:300]}")
+                with open("debug_failed_resource.json", "w") as df:
+                    json.dump(resource, df, indent=2)
+                print("    (saved failing resource to debug_failed_resource.json)")
 
     uploaded += ok
     print(f"  {name}: {ok}/{len(resources)} resources")
