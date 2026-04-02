@@ -42,16 +42,25 @@ def rewrite_refs(obj, urn_map):
             rewrite_refs(item, urn_map)
 
 
-def strip_missing_refs(resource, urn_map):
-    """Remove reference fields that still point to urn:uuid (resources we didn't keep)."""
-    drop_keys = []
-    for key, val in resource.items():
-        if isinstance(val, dict) and "reference" in val:
-            ref = val["reference"]
-            if ref.startswith("urn:uuid:") and ref not in urn_map:
-                drop_keys.append(key)
-    for k in drop_keys:
-        del resource[k]
+def strip_dangling_refs(obj):
+    """Recursively remove any dict that contains a urn:uuid: reference we couldn't resolve."""
+    if isinstance(obj, dict):
+        drop_keys = []
+        for key, val in obj.items():
+            if isinstance(val, dict):
+                if "reference" in val and isinstance(val["reference"], str) and val["reference"].startswith("urn:uuid:"):
+                    drop_keys.append(key)
+                else:
+                    strip_dangling_refs(val)
+            elif isinstance(val, list):
+                obj[key] = [
+                    item for item in val
+                    if not (isinstance(item, dict) and isinstance(item.get("reference"), str) and item["reference"].startswith("urn:uuid:"))
+                ]
+                for item in obj[key]:
+                    strip_dangling_refs(item)
+        for k in drop_keys:
+            del obj[k]
 
 
 for filepath in files:
@@ -80,7 +89,7 @@ for filepath in files:
         if res.get("resourceType") not in KEEP_TYPES:
             continue
         rewrite_refs(res, urn_map)
-        strip_missing_refs(res, urn_map)
+        strip_dangling_refs(res)
         resources.append(res)
 
     resources.sort(key=lambda r: 0 if r["resourceType"] == "Patient" else 1)
