@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SleepLog, Medication } from "../types";
+import { API_BASE } from "../api";
 
 const PATIENT_ID = "7cd8a8ad-746b-549e-e70d-0c0feb8ebc69";
 import StatCard from "../components/ui/StatCard";
@@ -12,14 +13,14 @@ export default function Dashboard() {
   const [medications, setMedications] = useState<Medication[]>([]);
 
   useEffect(() => {
-    fetch(`/api/sleep-logs/patient/${PATIENT_ID}`)
+    fetch(`${API_BASE}/api/sleep-logs/patient/${PATIENT_ID}`)
       .then((r) => r.json())
       .then((data: SleepLog[]) => setSleepLogs(data))
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    fetch(`/api/fhir/patient/${PATIENT_ID}/medications`)
+    fetch(`${API_BASE}/api/fhir/patient/${PATIENT_ID}/medications`)
       .then((r) => r.json())
       .then((data: Medication[]) => { if (Array.isArray(data)) setMedications(data); })
       .catch(() => {});

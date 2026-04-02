@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE } from "../api";
 
 type FormState = {
   date: string;
@@ -29,7 +30,7 @@ export default function SleepLog() {
     e.preventDefault();
     setStatus("submitting");
     try {
-      const res = await fetch("/api/sleep-logs/", {
+      const res = await fetch(`${API_BASE}/api/sleep-logs/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, patient_id: "7cd8a8ad-746b-549e-e70d-0c0feb8ebc69" }),
