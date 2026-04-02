@@ -32,7 +32,7 @@ export default function SleepLog() {
       const res = await fetch("/api/sleep-logs/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, patient_id: "592912" }),
+        body: JSON.stringify({ ...form, patient_id: "7cd8a8ad-746b-549e-e70d-0c0feb8ebc69" }),
       });
       if (!res.ok) throw new Error();
       setStatus("success");

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SleepLog, Medication } from "../types";
 
-const PATIENT_ID = "592912";
+const PATIENT_ID = "7cd8a8ad-746b-549e-e70d-0c0feb8ebc69";
 import StatCard from "../components/ui/StatCard";
 import SleepTrendChart from "../components/dashboard/SleepTrendChart";
 import MedicationSidebar from "../components/dashboard/MedicationSidebar";
