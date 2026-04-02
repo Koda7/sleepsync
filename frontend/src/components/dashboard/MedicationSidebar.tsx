@@ -21,13 +21,13 @@ export default function MedicationSidebar({ medications, latest, trend }: Props)
     .sort((a, b) => (a.status === "active" ? -1 : 1) - (b.status === "active" ? -1 : 1));
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 flex-1">
-        <h3 className="font-semibold mb-3">Current Medications</h3>
+    <>
+      <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+        <h3 className="font-semibold mb-3 text-sm">Current Medications</h3>
         {cleaned.length === 0 ? (
           <p className="text-zinc-400 text-sm">No medication data available.</p>
         ) : (
-          <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
+          <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
             {cleaned.map((med, i) => (
               <div key={i} className="bg-zinc-800 rounded-lg p-3 text-sm">
                 <p className="font-medium">{med.name ?? med.medication}</p>
@@ -55,6 +55,6 @@ export default function MedicationSidebar({ medications, latest, trend }: Props)
         <h3 className="font-semibold mb-1">Trend</h3>
         <p className="text-zinc-300">{trend}</p>
       </div>
-    </div>
+    </>
   );
 }

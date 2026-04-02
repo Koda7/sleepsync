@@ -1,6 +1,23 @@
 import type { SleepLog } from "../../types";
 
-export default function SleepLogTable({ logs }: { logs: SleepLog[] }) {
+type Props = {
+  logs: SleepLog[];
+  onDelete: (logId: number) => void;
+  formatDate: (iso: string) => string;
+};
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+export default function SleepLogTable({ logs, onDelete, formatDate }: Props) {
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5">
       <h2 className="font-semibold mb-4">Recent Sleep Logs</h2>
@@ -15,18 +32,31 @@ export default function SleepLogTable({ logs }: { logs: SleepLog[] }) {
               <th className="pb-2 pr-4 font-medium">Woke at Night</th>
               <th className="pb-2 pr-4 font-medium">Trouble Falling</th>
               <th className="pb-2 pr-4 font-medium">Woke Early</th>
+              <th className="pb-2 font-medium w-16"></th>
             </tr>
           </thead>
           <tbody>
             {logs.map((log) => (
-              <tr key={log.id} className="border-b border-zinc-800 text-zinc-300">
-                <td className="py-2 pr-4">{log.date}</td>
+              <tr key={log.id} className="border-b border-zinc-800 text-zinc-300 group">
+                <td className="py-2 pr-4">
+                  <span>{formatDate(log.date)}</span>
+                  <span className="block text-[11px] text-zinc-500">{timeAgo(log.created_at)}</span>
+                </td>
                 <td className="py-2 pr-4">{log.hours_slept}</td>
                 <td className="py-2 pr-4">{log.quality}</td>
                 <td className="py-2 pr-4">{log.stress_level}</td>
                 <td className="py-2 pr-4">{log.woke_during_night ? "Yes" : "No"}</td>
                 <td className="py-2 pr-4">{log.trouble_falling_asleep ? "Yes" : "No"}</td>
                 <td className="py-2 pr-4">{log.woke_too_early ? "Yes" : "No"}</td>
+                <td className="py-2 text-right">
+                  <button
+                    onClick={() => onDelete(log.id)}
+                    className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 text-xs transition-opacity"
+                    title="Delete entry"
+                  >
+                    ✕
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api";
 
 type FormState = {
@@ -24,6 +25,7 @@ export default function SleepLog() {
     notes: "",
   });
 
+  const navigate = useNavigate();
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -37,7 +39,7 @@ export default function SleepLog() {
       });
       if (!res.ok) throw new Error();
       setStatus("success");
-      setForm((prev) => ({ ...prev, notes: "" }));
+      setTimeout(() => navigate("/"), 800);
     } catch {
       setStatus("error");
     }
