@@ -16,6 +16,8 @@ FHIR_BASE_URL = os.getenv(
 
 FHIR_TIMEOUT = float(os.getenv("FHIR_TIMEOUT", "30"))
 
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
