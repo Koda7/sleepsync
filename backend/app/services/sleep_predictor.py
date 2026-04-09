@@ -28,6 +28,11 @@ FEATURE_COLUMNS = [
     "med_diphenhydramine", "med_zolpidem", "med_sertraline",
     "med_melatonin", "med_ibuprofen", "med_acetaminophen",
     "age",
+    "sleep_efficiency",
+    "condition_burden",
+    "medication_count",
+    "stress_sleep_interaction",
+    "hours_quality_ratio",
 ]
 
 CONDITION_FLAGS = [
@@ -119,6 +124,21 @@ def build_features(
 
     features["age"] = float(age) if age else 0.0
 
+    avg_h = features.get("avg_hours_7d", 7.0)
+    max_h = features.get("max_hours_7d", avg_h + 0.5)
+    avg_q = features.get("avg_quality_7d", 3.0)
+    avg_s = features.get("avg_stress_7d", 3.0)
+
+    features["sleep_efficiency"] = round(float(np.clip(avg_h / max(max_h, avg_h + 0.5), 0.3, 1.0)), 3)
+    features["condition_burden"] = sum(
+        1.0 for f in CONDITION_FLAGS if features.get(f"cond_{f.replace(' ', '_')}", 0)
+    )
+    features["medication_count"] = sum(
+        1.0 for f in MEDICATION_FLAGS if features.get(f"med_{f}", 0)
+    )
+    features["stress_sleep_interaction"] = round(float(avg_s * (1.0 - avg_h / 10.0)), 3)
+    features["hours_quality_ratio"] = round(float(avg_h / max(avg_q, 1.0)), 3)
+
     return features
 
 
@@ -156,7 +176,8 @@ def _predict_with_model(features: dict[str, float], model_data: dict[str, Any]) 
         "risk_level": risk,
         "confidence": confidence,
         "top_factors": _top_factors(features),
-        "model_type": "gradient_boosting",
+        "model_type": model_data.get("model_name", "gradient_boosting"),
+        "model_accuracy": float(model_data.get("test_accuracy", 0)),
     }
 
 
