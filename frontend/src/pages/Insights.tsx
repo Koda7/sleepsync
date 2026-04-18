@@ -1,8 +1,4 @@
 import { useEffect, useState } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  ResponsiveContainer, ReferenceLine, Cell,
-} from "recharts";
 import { API_BASE } from "../api";
 import { usePatient } from "../context/PatientContext";
 
@@ -125,11 +121,10 @@ export default function Insights() {
 
   const currentYear = new Date().getFullYear();
   const medTimeline = (() => {
-    const grouped = new Map<string, { label: string; fullName: string; startYear: number; endYear: number; hasActive: boolean }>();
+    const grouped = new Map<string, { fullName: string; startYear: number; endYear: number; hasActive: boolean }>();
     for (const m of medications) {
       if (m.medication === "Unknown" || !m.authoredOn) continue;
-      const fullName = m.medication.split(" ").slice(0, 3).join(" ");
-      const label = fullName.length > 20 ? fullName.slice(0, 18) + "..." : fullName;
+      const fullName = m.medication;
       const year = new Date(m.authoredOn).getFullYear();
       const existing = grouped.get(fullName);
       if (existing) {
@@ -137,21 +132,21 @@ export default function Insights() {
         existing.endYear = Math.max(existing.endYear, year);
         if (m.status === "active") existing.hasActive = true;
       } else {
-        grouped.set(fullName, { label, fullName, startYear: year, endYear: year, hasActive: m.status === "active" });
+        grouped.set(fullName, { fullName, startYear: year, endYear: year, hasActive: m.status === "active" });
       }
     }
     return [...grouped.values()]
       .map((g) => ({
-        label: g.label,
         fullName: g.fullName,
-        offset: g.startYear,
-        duration: Math.max((g.hasActive ? currentYear : g.endYear) - g.startYear, 1),
         startYear: g.startYear,
         endYear: g.hasActive ? currentYear : g.endYear,
-        status: g.hasActive ? "active" : "completed",
+        status: g.hasActive ? "active" as const : "completed" as const,
       }))
       .sort((a, b) => a.startYear - b.startYear);
   })();
+  const timelineMin = medTimeline.length > 0 ? Math.min(...medTimeline.map((m) => m.startYear)) : currentYear;
+  const timelineMax = currentYear;
+  const timelineSpan = Math.max(timelineMax - timelineMin, 1);
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 text-white">
@@ -328,54 +323,63 @@ export default function Insights() {
         </div>
 
         {medTimeline.length > 0 ? (
-          <ResponsiveContainer width="100%" height={Math.max(medTimeline.length * 50 + 40, 140)}>
-            <BarChart data={medTimeline} layout="vertical" margin={{ left: 10, right: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" horizontal={false} />
-              <XAxis
-                type="number"
-                domain={[
-                  (min: number) => Math.floor(min / 5) * 5,
-                  currentYear + 1,
-                ]}
-                tick={{ fill: "#a1a1aa", fontSize: 11 }}
-                tickFormatter={(v) => String(Math.round(v))}
-              />
-              <YAxis
-                type="category"
-                dataKey="label"
-                tick={{ fill: "#a1a1aa", fontSize: 11 }}
-                width={160}
-              />
-              <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.05)" }}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.[1]) return null;
-                  const d = payload[1].payload as typeof medTimeline[number];
+          <div>
+            {/* Year axis */}
+            <div className="flex items-end mb-2 pl-[200px]">
+              <div className="flex-1 relative h-5">
+                {Array.from({ length: Math.min(Math.ceil(timelineSpan / 5) + 1, 12) }, (_, i) => {
+                  const year = timelineMin + i * Math.max(Math.ceil(timelineSpan / 10) * 2, 1);
+                  if (year > timelineMax + 1) return null;
+                  const pct = ((year - timelineMin) / timelineSpan) * 100;
                   return (
-                    <div className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 shadow-lg">
-                      <p className="text-sm font-medium text-white">{d.fullName}</p>
-                      <p className="text-xs text-zinc-400 mt-0.5">
-                        {d.startYear} – {d.status === "active" ? "Present" : d.endYear}
-                      </p>
-                      <p className="text-xs mt-0.5">
-                        <span className={d.status === "active" ? "text-indigo-400" : "text-zinc-500"}>
-                          {d.status === "active" ? "● Active" : "● Completed"}
-                        </span>
+                    <span key={year} className="absolute text-[10px] text-zinc-500 -translate-x-1/2" style={{ left: `${pct}%` }}>
+                      {year}
+                    </span>
+                  );
+                })}
+                <span className="absolute text-[10px] text-indigo-400 font-medium -translate-x-1/2" style={{ left: "100%" }}>
+                  {currentYear}
+                </span>
+              </div>
+            </div>
+
+            {/* Medication rows */}
+            <div className="space-y-3">
+              {medTimeline.map((med) => {
+                const leftPct = ((med.startYear - timelineMin) / timelineSpan) * 100;
+                const widthPct = Math.max(((med.endYear - med.startYear) / timelineSpan) * 100, 2);
+                const isActive = med.status === "active";
+                return (
+                  <div key={med.fullName} className="flex items-center gap-3">
+                    <div className="w-[188px] shrink-0 text-right">
+                      <p className="text-sm text-zinc-200 truncate" title={med.fullName}>
+                        {med.fullName.length > 28 ? med.fullName.slice(0, 26) + "..." : med.fullName}
                       </p>
                     </div>
-                  );
-                }}
-              />
-              <ReferenceLine x={currentYear} stroke="#818cf8" strokeDasharray="3 3" label={{ value: "Now", fill: "#818cf8", fontSize: 10 }} />
-              {/* Invisible offset bar to position the visible bar at the correct start year */}
-              <Bar dataKey="offset" stackId="timeline" fill="transparent" barSize={20} />
-              <Bar dataKey="duration" stackId="timeline" radius={[0, 4, 4, 0]} barSize={20}>
-                {medTimeline.map((entry, i) => (
-                  <Cell key={i} fill={entry.status === "active" ? "#818cf8" : "#52525b"} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                    <div className="flex-1 relative h-8 bg-zinc-800/40 rounded">
+                      <div
+                        className={`absolute top-1 bottom-1 rounded transition-all ${
+                          isActive ? "bg-indigo-500" : "bg-zinc-600"
+                        }`}
+                        style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 8 }}
+                        title={`${med.fullName}\n${med.startYear} – ${isActive ? "Present" : med.endYear}\n${med.status}`}
+                      />
+                      {/* "Now" marker line */}
+                      <div className="absolute top-0 bottom-0 w-px bg-indigo-400/30" style={{ left: "100%" }} />
+                    </div>
+                    <div className="w-[120px] shrink-0">
+                      <span className="text-xs text-zinc-400">
+                        {med.startYear} – {isActive ? "Present" : med.endYear}
+                      </span>
+                      <span className={`ml-1.5 text-[10px] ${isActive ? "text-indigo-400" : "text-zinc-500"}`}>
+                        {isActive ? "● Active" : "● Done"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         ) : (
           <p className="text-zinc-500 text-sm py-4">No medication data available.</p>
         )}
