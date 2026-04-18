@@ -146,8 +146,27 @@ def get_medication_requests(patient_id: str) -> list[dict[str, Any]]:
     )
 
 
-def search_patients(name: Optional[str] = None, count: int = 20) -> list[dict[str, Any]]:
+_patient_search_cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+_CACHE_TTL = 300  # 5 minutes
+
+def search_patients(name: Optional[str] = None, count: int = 10) -> list[dict[str, Any]]:
+    import time
+
+    cache_key = (name or "").lower().strip()
+    if cache_key in _patient_search_cache:
+        ts, cached = _patient_search_cache[cache_key]
+        if time.time() - ts < _CACHE_TTL:
+            return cached
+
     params: dict[str, str] = {"_count": str(count)}
     if name:
         params["name"] = name
-    return _get_bundle_pages("Patient", params, want_type="Patient")
+
+    # Single page only -- no pagination to avoid crawling thousands of FHIR results
+    resp = _client.get("/Patient", params=params)
+    resp.raise_for_status()
+    bundle_dict = resp.json()
+    results = _resources_from_bundle_payload(bundle_dict, want_type="Patient")
+
+    _patient_search_cache[cache_key] = (time.time(), results)
+    return results

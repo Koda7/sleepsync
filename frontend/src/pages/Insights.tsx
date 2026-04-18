@@ -304,8 +304,25 @@ export default function Insights() {
                 width={110}
               />
               <Tooltip
-                contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", fontSize: 12 }}
-                formatter={(value) => [String(value), "Year"]}
+                contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", fontSize: 12, borderRadius: 8 }}
+                cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.[0]) return null;
+                  const d = payload[0].payload as { name: string; year: number; status: string };
+                  return (
+                    <div className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 shadow-lg">
+                      <p className="text-sm font-medium text-white">{d.name}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Prescribed: {d.year}
+                      </p>
+                      <p className="text-xs mt-0.5">
+                        <span className={d.status === "active" ? "text-indigo-400" : "text-zinc-500"}>
+                          {d.status === "active" ? "● Active" : "● Completed"}
+                        </span>
+                      </p>
+                    </div>
+                  );
+                }}
               />
               <ReferenceLine x={new Date().getFullYear()} stroke="#818cf8" strokeDasharray="3 3" label={{ value: "Now", fill: "#818cf8", fontSize: 10 }} />
               <Bar
