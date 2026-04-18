@@ -23,11 +23,13 @@ export default function Dashboard() {
   const [sleepLogs, setSleepLogs] = useState<SleepLog[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [conditions, setConditions] = useState<ConditionItem[]>([]);
+  const [conditionsLoading, setConditionsLoading] = useState(true);
 
   useEffect(() => {
     setSleepLogs([]);
     setMedications([]);
     setConditions([]);
+    setConditionsLoading(true);
 
     fetch(`${API_BASE}/api/sleep-logs/patient/${patientId}`)
       .then((r) => r.json())
@@ -42,7 +44,8 @@ export default function Dashboard() {
     fetch(`${API_BASE}/api/fhir/patient/${patientId}/conditions`)
       .then((r) => r.json())
       .then((data: ConditionItem[]) => { if (Array.isArray(data)) setConditions(data); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setConditionsLoading(false));
   }, [patientId]);
 
   const sorted = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date));
@@ -105,9 +108,15 @@ export default function Dashboard() {
             <SleepTrendChart data={sorted} />
             <div className="flex flex-col gap-4">
               <MedicationSidebar medications={medications} latest={latest} trend={trend} />
-              {activeConditions.length > 0 && (
-                <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
-                  <h3 className="font-semibold mb-3 text-sm">Active Conditions</h3>
+              <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+                <h3 className="font-semibold mb-3 text-sm">Active Conditions</h3>
+                {conditionsLoading ? (
+                  <div className="flex flex-wrap gap-2">
+                    {[1, 2, 3].map((i) => (
+                      <span key={i} className="bg-zinc-800 rounded-full h-6 w-24 animate-pulse" />
+                    ))}
+                  </div>
+                ) : activeConditions.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {activeConditions.map((c) => (
                       <span key={c.id} className="bg-zinc-800 text-zinc-300 text-xs px-2.5 py-1 rounded-full">
@@ -115,8 +124,10 @@ export default function Dashboard() {
                       </span>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-zinc-500 text-xs">No active conditions on file.</p>
+                )}
+              </div>
             </div>
           </div>
 
