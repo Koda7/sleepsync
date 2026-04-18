@@ -40,6 +40,7 @@ export default function SleepLog() {
         body: JSON.stringify({ ...form, patient_id: patientId }),
       });
       if (!res.ok) throw new Error();
+      try { sessionStorage.removeItem(`insights_${patientId}`); } catch {}
       setStatus("success");
       setTimeout(() => navigate("/"), 800);
     } catch {

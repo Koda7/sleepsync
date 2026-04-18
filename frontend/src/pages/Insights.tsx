@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { API_BASE } from "../api";
 import { usePatient } from "../context/PatientContext";
 
@@ -100,13 +101,17 @@ export default function Insights() {
 
     fetch(`${API_BASE}/api/insights/summary/${patientId}`)
       .then((r) => r.json())
-      .then((d) => { if (d && d.summary) { setSummary(d); entry.summary = d; writeCache(patientId, entry); } })
+      .then((d) => {
+        if (d) { setSummary(d.summary ? d : null); entry.summary = d.summary ? d : null; writeCache(patientId, entry); }
+      })
       .catch(() => {})
       .finally(() => setLoadingSummary(false));
 
     fetch(`${API_BASE}/api/insights/prediction/${patientId}`)
       .then((r) => r.json())
-      .then((d) => { if (d && d.prediction) { setPrediction(d); entry.prediction = d; writeCache(patientId, entry); } })
+      .then((d) => {
+        if (d) { setPrediction(d.prediction ? d : null); entry.prediction = d.prediction ? d : null; writeCache(patientId, entry); }
+      })
       .catch(() => {})
       .finally(() => setLoadingPrediction(false));
 
@@ -189,7 +194,7 @@ export default function Insights() {
               </svg>
               Generating summary...
             </div>
-          ) : summary ? (
+          ) : summary?.summary ? (
             <>
               <p className="text-zinc-300 text-sm leading-relaxed mb-5">
                 {summary.summary}
@@ -235,7 +240,12 @@ export default function Insights() {
               )}
             </>
           ) : (
-            <p className="text-zinc-500 text-sm">Unable to load summary.</p>
+            <div className="text-center py-6">
+              <p className="text-zinc-400 text-sm mb-3">No sleep data available yet.</p>
+              <Link to="/sleep-log" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors">
+                Log your first night to generate insights &rarr;
+              </Link>
+            </div>
           )}
         </div>
 
@@ -243,9 +253,11 @@ export default function Insights() {
         <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold">Sleep Quality Prediction</h2>
-            <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
-              {risk?.model_type ?? "ML"} · {((risk?.model_accuracy ?? 0) * 100).toFixed(0)}% accuracy
-            </span>
+            {risk && (
+              <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
+                {risk.model_type} · {(risk.model_accuracy * 100).toFixed(0)}% accuracy
+              </span>
+            )}
           </div>
 
           {loadingPrediction ? (
@@ -318,7 +330,12 @@ export default function Insights() {
               )}
             </>
           ) : (
-            <p className="text-zinc-500 text-sm">Unable to load prediction.</p>
+            <div className="text-center py-6">
+              <p className="text-zinc-400 text-sm mb-3">Not enough sleep data for a prediction.</p>
+              <Link to="/sleep-log" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors">
+                Start logging to enable predictions &rarr;
+              </Link>
+            </div>
           )}
         </div>
       </div>

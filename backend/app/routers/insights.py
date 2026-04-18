@@ -33,6 +33,14 @@ def get_sleep_summary(patient_id: str, db: Session = Depends(get_db)) -> dict[st
 
     patient_name = _format_name(patient_data)
 
+    if not logs:
+        return {
+            "patient_id": patient_id,
+            "patient_name": patient_name,
+            "summary": None,
+            "stats": sleep_stats,
+        }
+
     raw_conditions = fhir_client.get_conditions(patient_id)
     active_conditions = _extract_active_conditions(raw_conditions)
 
@@ -60,6 +68,13 @@ def get_sleep_prediction(patient_id: str, db: Session = Depends(get_db)) -> dict
         .limit(30)
         .all()
     )
+
+    if not logs:
+        return {
+            "patient_id": patient_id,
+            "prediction": None,
+            "features_used": 0,
+        }
 
     log_dicts = [
         {

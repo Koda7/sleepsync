@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import type { SleepLog, Medication } from "../types";
 import { API_BASE } from "../api";
 import { usePatient } from "../context/PatientContext";
@@ -93,26 +94,46 @@ export default function Dashboard() {
 
       {sorted.length === 0 ? (
         <>
-          <p className="text-zinc-400 mb-6">No sleep log data available. Add a log to get started.</p>
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
-            <h3 className="font-semibold mb-3 text-sm">Active Conditions</h3>
-            {conditionsLoading ? (
-              <div className="flex flex-wrap gap-2">
-                {[1, 2, 3].map((i) => (
-                  <span key={i} className="bg-zinc-800 rounded-full h-6 w-24 animate-pulse" />
-                ))}
-              </div>
-            ) : activeConditions.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {activeConditions.map((c) => (
-                  <span key={c.id} className="bg-zinc-800 text-zinc-300 text-xs px-2.5 py-1 rounded-full">
-                    {c.code}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-zinc-500 text-xs">No active conditions on file.</p>
-            )}
+          <p className="text-zinc-400 mb-1">No sleep log data available.</p>
+          <Link to="/sleep-log" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors inline-block mb-6">
+            Log your first night to get started &rarr;
+          </Link>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+              <h3 className="font-semibold mb-3 text-sm">Active Conditions</h3>
+              {conditionsLoading ? (
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3].map((i) => (
+                    <span key={i} className="bg-zinc-800 rounded-full h-6 w-24 animate-pulse" />
+                  ))}
+                </div>
+              ) : activeConditions.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {activeConditions.map((c) => (
+                    <span key={c.id} className="bg-zinc-800 text-zinc-300 text-xs px-2.5 py-1 rounded-full">
+                      {c.code}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-zinc-500 text-xs">No active conditions on file.</p>
+              )}
+            </div>
+            <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+              <h3 className="font-semibold mb-3 text-sm">Current Medications</h3>
+              {medications.filter((m) => m.status === "active").length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {medications.filter((m) => m.status === "active").slice(0, 5).map((m, i) => (
+                    <div key={i} className="text-xs">
+                      <p className="text-zinc-300">{m.medication ?? m.name}</p>
+                      {m.dosage && <p className="text-zinc-500">{m.dosage}</p>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-zinc-500 text-xs">No active medications on file.</p>
+              )}
+            </div>
           </div>
         </>
       ) : (
