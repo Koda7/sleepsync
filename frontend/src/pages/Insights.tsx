@@ -82,7 +82,7 @@ export default function Insights() {
 
   useEffect(() => {
     const existing = readCache(patientId);
-    if (existing?.summary && existing?.prediction) {
+    if (existing?.summary?.summary && existing?.prediction?.prediction) {
       setSummary(existing.summary);
       setPrediction(existing.prediction);
       setMedications(existing.medications);
