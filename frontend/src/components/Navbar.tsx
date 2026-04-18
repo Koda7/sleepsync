@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import PatientSelector from "./PatientSelector";
 
 export default function Navbar() {
   return (
@@ -29,6 +30,9 @@ export default function Navbar() {
       >
         Insights
       </NavLink>
+      <div className="ml-auto">
+        <PatientSelector />
+      </div>
     </nav>
   );
 }

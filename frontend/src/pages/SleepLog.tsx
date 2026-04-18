@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api";
+import { usePatient } from "../context/PatientContext";
 
 type FormState = {
   date: string;
@@ -14,6 +15,7 @@ type FormState = {
 };
 
 export default function SleepLog() {
+  const { patientId } = usePatient();
   const [form, setForm] = useState<FormState>({
     date: new Date().toISOString().split("T")[0],
     hours_slept: 7,
@@ -35,7 +37,7 @@ export default function SleepLog() {
       const res = await fetch(`${API_BASE}/api/sleep-logs/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, patient_id: "7cd8a8ad-746b-549e-e70d-0c0feb8ebc69" }),
+        body: JSON.stringify({ ...form, patient_id: patientId }),
       });
       if (!res.ok) throw new Error();
       setStatus("success");

@@ -4,8 +4,7 @@ import {
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { API_BASE } from "../api";
-
-const PATIENT_ID = "7cd8a8ad-746b-549e-e70d-0c0feb8ebc69";
+import { usePatient } from "../context/PatientContext";
 
 type SummaryResponse = {
   patient_id: string;
@@ -56,6 +55,7 @@ const TREND_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export default function Insights() {
+  const { patientId } = usePatient();
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
   const [medications, setMedications] = useState<MedicationItem[]>([]);
@@ -63,29 +63,31 @@ export default function Insights() {
   const [loadingPrediction, setLoadingPrediction] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/insights/summary/${PATIENT_ID}`)
+    setSummary(null);
+    setPrediction(null);
+    setMedications([]);
+    setLoadingSummary(true);
+    setLoadingPrediction(true);
+
+    fetch(`${API_BASE}/api/insights/summary/${patientId}`)
       .then((r) => r.json())
-      .then((d) => setSummary(d))
+      .then((d) => { if (d && d.summary) setSummary(d); })
       .catch(() => {})
       .finally(() => setLoadingSummary(false));
-  }, []);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/insights/prediction/${PATIENT_ID}`)
+    fetch(`${API_BASE}/api/insights/prediction/${patientId}`)
       .then((r) => r.json())
-      .then((d) => setPrediction(d))
+      .then((d) => { if (d && d.prediction) setPrediction(d); })
       .catch(() => {})
       .finally(() => setLoadingPrediction(false));
-  }, []);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/fhir/patient/${PATIENT_ID}/medications`)
+    fetch(`${API_BASE}/api/fhir/patient/${patientId}/medications`)
       .then((r) => r.json())
       .then((data: MedicationItem[]) => {
         if (Array.isArray(data)) setMedications(data);
       })
       .catch(() => {});
-  }, []);
+  }, [patientId]);
 
   const risk = prediction?.prediction;
   const riskStyle = RISK_COLORS[risk?.risk_level ?? "moderate"];

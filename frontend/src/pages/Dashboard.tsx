@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SleepLog, Medication } from "../types";
 import { API_BASE } from "../api";
-
-const PATIENT_ID = "7cd8a8ad-746b-549e-e70d-0c0feb8ebc69";
+import { usePatient } from "../context/PatientContext";
 import StatCard from "../components/ui/StatCard";
 import SleepTrendChart from "../components/dashboard/SleepTrendChart";
 import MedicationSidebar from "../components/dashboard/MedicationSidebar";
@@ -17,42 +16,34 @@ function formatDate(iso: string) {
   });
 }
 
-type PatientInfo = { name: string; birthDate: string; gender: string } | null;
 type ConditionItem = { id: string; code: string; clinicalStatus: string };
 
 export default function Dashboard() {
+  const { patientId, patient } = usePatient();
   const [sleepLogs, setSleepLogs] = useState<SleepLog[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
-  const [patient, setPatient] = useState<PatientInfo>(null);
   const [conditions, setConditions] = useState<ConditionItem[]>([]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/sleep-logs/patient/${PATIENT_ID}`)
-      .then((r) => r.json())
-      .then((data: SleepLog[]) => setSleepLogs(data))
-      .catch(() => {});
-  }, []);
+    setSleepLogs([]);
+    setMedications([]);
+    setConditions([]);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/fhir/patient/${PATIENT_ID}/medications`)
+    fetch(`${API_BASE}/api/sleep-logs/patient/${patientId}`)
+      .then((r) => r.json())
+      .then((data: SleepLog[]) => { if (Array.isArray(data)) setSleepLogs(data); })
+      .catch(() => {});
+
+    fetch(`${API_BASE}/api/fhir/patient/${patientId}/medications`)
       .then((r) => r.json())
       .then((data: Medication[]) => { if (Array.isArray(data)) setMedications(data); })
       .catch(() => {});
-  }, []);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/fhir/patient/${PATIENT_ID}`)
-      .then((r) => r.json())
-      .then((data) => setPatient(data))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    fetch(`${API_BASE}/api/fhir/patient/${PATIENT_ID}/conditions`)
+    fetch(`${API_BASE}/api/fhir/patient/${patientId}/conditions`)
       .then((r) => r.json())
       .then((data: ConditionItem[]) => { if (Array.isArray(data)) setConditions(data); })
       .catch(() => {});
-  }, []);
+  }, [patientId]);
 
   const sorted = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date));
   const newest = [...sleepLogs].sort((a, b) => b.date.localeCompare(a.date));
