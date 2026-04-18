@@ -82,7 +82,11 @@ export default function Insights() {
 
   useEffect(() => {
     const existing = readCache(patientId);
-    if (existing?.summary?.summary && existing?.prediction?.prediction) {
+    const hasRealData =
+      existing?.summary?.summary &&
+      existing?.prediction?.prediction &&
+      (existing?.summary?.stats?.total_logs ?? 0) > 0;
+    if (hasRealData) {
       setSummary(existing.summary);
       setPrediction(existing.prediction);
       setMedications(existing.medications);
