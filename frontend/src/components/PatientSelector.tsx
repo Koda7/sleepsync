@@ -21,8 +21,10 @@ function saveRecent(p: SearchResult) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, MAX_RECENT)));
 }
 
-function formatDob(d: string) {
+function formatDob(d: string | null | undefined) {
+  if (!d || !d.includes("-")) return "Unknown";
   const [y, m, day] = d.split("-").map(Number);
+  if (isNaN(y)) return "Unknown";
   return new Date(y, m - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -176,9 +178,8 @@ function PatientRow({ p, active, onSelect }: { p: SearchResult; active: boolean;
           )}
         </div>
         <div className="text-xs text-zinc-500 mt-0.5">
-          {p.gender === "male" ? "Male" : p.gender === "female" ? "Female" : p.gender}
-          {" · Born "}
-          {formatDob(p.birthDate)}
+          {p.gender === "male" ? "Male" : p.gender === "female" ? "Female" : p.gender || "Unknown"}
+          {p.birthDate ? ` · Born ${formatDob(p.birthDate)}` : ""}
         </div>
       </button>
     </li>
