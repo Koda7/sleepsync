@@ -195,7 +195,7 @@ export default function Insights() {
                 {summary.summary}
               </p>
 
-              {stats && (
+              {stats && stats.avg_hours != null && (
                 <div className="border-t border-zinc-700 pt-4">
                   <div className="flex items-center gap-2 mb-3">
                     <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Supporting Evidence</h3>
@@ -223,11 +223,11 @@ export default function Insights() {
                       <p className="text-xs text-zinc-500 mt-0.5">Total Logs</p>
                     </div>
                     <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-red-400">{stats.poor_nights}</p>
+                      <p className="text-2xl font-bold text-red-400">{stats.poor_nights ?? 0}</p>
                       <p className="text-xs text-zinc-500 mt-0.5">Poor Nights</p>
                     </div>
                     <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-amber-400">{stats.disturbance_nights}</p>
+                      <p className="text-2xl font-bold text-amber-400">{stats.disturbance_nights ?? 0}</p>
                       <p className="text-xs text-zinc-500 mt-0.5">Disturbances</p>
                     </div>
                   </div>
@@ -277,7 +277,7 @@ export default function Insights() {
                     </span>
                   </div>
                   <p className="text-zinc-400 text-sm">
-                    Based on {prediction!.features_used} features from sleep logs, FHIR conditions, medications, and demographics.
+                    Based on {prediction?.features_used ?? 0} features from sleep logs, FHIR conditions, medications, and demographics.
                   </p>
                 </div>
               </div>
