@@ -1,8 +1,11 @@
+import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
 from ..services import fhir_client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/fhir", tags=["fhir"])
 
@@ -27,15 +30,23 @@ def read_patient(patient_id: str) -> dict[str, Any]:
 @router.get("/patient/{patient_id}/conditions")
 def list_conditions_for_patient(patient_id: str) -> list[dict[str, Any]]:
     """Search Condition resources for a patient (`GET /Condition?patient=...`)."""
-    raw = fhir_client.get_conditions(patient_id)
-    return [_condition_summary(c) for c in raw]
+    try:
+        raw = fhir_client.get_conditions(patient_id)
+        return [_condition_summary(c) for c in raw]
+    except Exception:
+        logger.exception("Failed to fetch conditions for patient %s", patient_id)
+        return []
 
 
 @router.get("/patient/{patient_id}/medications")
 def list_medication_requests_for_patient(patient_id: str) -> list[dict[str, Any]]:
     """Search MedicationRequest resources for a patient (`GET /MedicationRequest?patient=...`)."""
-    raw = fhir_client.get_medication_requests(patient_id)
-    return [_medication_request_summary(m) for m in raw]
+    try:
+        raw = fhir_client.get_medication_requests(patient_id)
+        return [_medication_request_summary(m) for m in raw]
+    except Exception:
+        logger.exception("Failed to fetch medications for patient %s", patient_id)
+        return []
 
 
 @router.get("/conditions/{condition_id}")
@@ -61,7 +72,11 @@ def read_medication_request(medication_request_id: str) -> dict[str, Any]:
 
 @router.get("/patients/search")
 def search_patients(name: Optional[str] = Query(default=None)) -> list[dict[str, Any]]:
-    raw = fhir_client.search_patients(name=name)
+    try:
+        raw = fhir_client.search_patients(name=name)
+    except Exception:
+        logger.exception("Patient search failed for name=%s", name)
+        return []
     results = []
     for p in raw:
         formatted = _format_name(p)

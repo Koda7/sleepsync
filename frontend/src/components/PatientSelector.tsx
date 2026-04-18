@@ -60,10 +60,11 @@ export default function PatientSelector() {
     if (debounce.current) clearTimeout(debounce.current);
     if (value.length < 1) {
       setResults([]);
+      setSearching(false);
       return;
     }
+    setSearching(true);
     debounce.current = setTimeout(() => {
-      setSearching(true);
       fetch(`${API_BASE}/api/fhir/patients/search?name=${encodeURIComponent(value)}`)
         .then((r) => r.json())
         .then((data: SearchResult[]) => {

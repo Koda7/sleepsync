@@ -92,7 +92,7 @@ export default function Dashboard() {
       <p className="text-zinc-400 mb-6 text-sm">Patient-reported sleep trends, medication context, and recent patterns.</p>
 
       {sorted.length === 0 ? (
-        <p className="text-zinc-400">No sleep log data available. Add a log to get started.</p>
+        <p className="text-zinc-400 mb-6">No sleep log data available. Add a log to get started.</p>
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
@@ -108,32 +108,49 @@ export default function Dashboard() {
             <SleepTrendChart data={sorted} />
             <div className="flex flex-col gap-4">
               <MedicationSidebar medications={medications} latest={latest} trend={trend} />
-              <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
-                <h3 className="font-semibold mb-3 text-sm">Active Conditions</h3>
-                {conditionsLoading ? (
-                  <div className="flex flex-wrap gap-2">
-                    {[1, 2, 3].map((i) => (
-                      <span key={i} className="bg-zinc-800 rounded-full h-6 w-24 animate-pulse" />
-                    ))}
-                  </div>
-                ) : activeConditions.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {activeConditions.map((c) => (
-                      <span key={c.id} className="bg-zinc-800 text-zinc-300 text-xs px-2.5 py-1 rounded-full">
-                        {c.code}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-zinc-500 text-xs">No active conditions on file.</p>
-                )}
-              </div>
             </div>
           </div>
 
           <SleepLogTable logs={newest} onDelete={handleDelete} formatDate={formatDate} />
         </>
       )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-6">
+        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+          <h3 className="font-semibold mb-3 text-sm">Active Conditions</h3>
+          {conditionsLoading ? (
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3].map((i) => (
+                <span key={i} className="bg-zinc-800 rounded-full h-6 w-24 animate-pulse" />
+              ))}
+            </div>
+          ) : activeConditions.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {activeConditions.map((c) => (
+                <span key={c.id} className="bg-zinc-800 text-zinc-300 text-xs px-2.5 py-1 rounded-full">
+                  {c.code}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-zinc-500 text-xs">No active conditions on file.</p>
+          )}
+        </div>
+        {medications.length > 0 && sorted.length === 0 && (
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+            <h3 className="font-semibold mb-3 text-sm">Current Medications</h3>
+            <div className="space-y-2">
+              {medications.filter((m) => m.status === "active").slice(0, 5).map((m, i) => (
+                <div key={String(m.medication ?? i)} className="bg-zinc-800/50 rounded-lg p-3">
+                  <p className="text-sm text-zinc-200 font-medium">{m.medication ?? m.name}</p>
+                  <p className="text-xs text-zinc-500">Dosage: {m.dosage ?? "N/A"}</p>
+                  <p className="text-xs text-green-400">Status: {m.status}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

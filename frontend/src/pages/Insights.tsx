@@ -195,42 +195,44 @@ export default function Insights() {
                 {summary.summary}
               </p>
 
-              <div className="border-t border-zinc-700 pt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Supporting Evidence</h3>
-                  {trendInfo && (
-                    <span className={`text-xs font-medium ${trendInfo.color}`}>
-                      {trendInfo.label}
-                    </span>
-                  )}
+              {stats && (
+                <div className="border-t border-zinc-700 pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Supporting Evidence</h3>
+                    {trendInfo && (
+                      <span className={`text-xs font-medium ${trendInfo.color}`}>
+                        {trendInfo.label}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-white">{stats.avg_hours.toFixed(1)}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">Avg Hours</p>
+                    </div>
+                    <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-white">{stats.avg_quality.toFixed(1)}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">Avg Quality</p>
+                    </div>
+                    <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-white">{stats.avg_stress.toFixed(1)}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">Avg Stress</p>
+                    </div>
+                    <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-white">{stats.total_logs}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">Total Logs</p>
+                    </div>
+                    <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-red-400">{stats.poor_nights}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">Poor Nights</p>
+                    </div>
+                    <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-amber-400">{stats.disturbance_nights}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">Disturbances</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-white">{stats!.avg_hours.toFixed(1)}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Avg Hours</p>
-                  </div>
-                  <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-white">{stats!.avg_quality.toFixed(1)}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Avg Quality</p>
-                  </div>
-                  <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-white">{stats!.avg_stress.toFixed(1)}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Avg Stress</p>
-                  </div>
-                  <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-white">{stats!.total_logs}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Total Logs</p>
-                  </div>
-                  <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-red-400">{stats!.poor_nights}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Poor Nights</p>
-                  </div>
-                  <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-amber-400">{stats!.disturbance_nights}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Disturbances</p>
-                  </div>
-                </div>
-              </div>
+              )}
             </>
           ) : (
             <p className="text-zinc-500 text-sm">Unable to load summary.</p>
