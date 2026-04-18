@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  ResponsiveContainer, ReferenceLine,
+  ResponsiveContainer, ReferenceLine, Cell,
 } from "recharts";
 import { API_BASE } from "../api";
 import { usePatient } from "../context/PatientContext";
@@ -310,10 +310,16 @@ export default function Insights() {
               <ReferenceLine x={new Date().getFullYear()} stroke="#818cf8" strokeDasharray="3 3" label={{ value: "Now", fill: "#818cf8", fontSize: 10 }} />
               <Bar
                 dataKey="year"
-                fill="#818cf8"
                 radius={[0, 4, 4, 0]}
                 barSize={16}
-              />
+              >
+                {medTimeline.map((entry, i) => (
+                  <Cell
+                    key={i}
+                    fill={entry.status === "active" ? "#818cf8" : "#52525b"}
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (
