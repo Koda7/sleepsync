@@ -4,7 +4,9 @@ import PatientSelector from "./PatientSelector";
 export default function Navbar() {
   return (
     <nav className="bg-zinc-900 border-b border-zinc-700 px-6 py-3 flex items-center gap-6">
-      <span className="text-white font-semibold text-lg">SleepSync</span>
+      <NavLink to="/" className="text-white font-semibold text-lg hover:text-indigo-400 transition-colors">
+        SleepSync
+      </NavLink>
       <NavLink
         to="/"
         end
