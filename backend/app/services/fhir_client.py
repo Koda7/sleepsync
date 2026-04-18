@@ -162,11 +162,15 @@ def search_patients(name: Optional[str] = None, count: int = 10) -> list[dict[st
     if name:
         params["name"] = name
 
-    # Single page only -- no pagination to avoid crawling thousands of FHIR results
+    # Single page, raw JSON extraction (skip Pydantic validation for speed)
     resp = _client.get("/Patient", params=params)
     resp.raise_for_status()
     bundle_dict = resp.json()
-    results = _resources_from_bundle_payload(bundle_dict, want_type="Patient")
+    results: list[dict[str, Any]] = []
+    for entry in bundle_dict.get("entry", []) or []:
+        res = entry.get("resource")
+        if res and res.get("resourceType") == "Patient":
+            results.append(res)
 
     _patient_search_cache[cache_key] = (time.time(), results)
     return results
