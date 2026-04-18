@@ -142,11 +142,16 @@ export default function Insights() {
         endYear: g.hasActive ? currentYear : g.endYear,
         status: g.hasActive ? "active" as const : "completed" as const,
       }))
-      .sort((a, b) => a.startYear - b.startYear);
+      .sort((a, b) => {
+        if (a.status !== b.status) return a.status === "active" ? -1 : 1;
+        return a.startYear - b.startYear;
+      });
   })();
   const timelineMin = medTimeline.length > 0 ? Math.min(...medTimeline.map((m) => m.startYear)) : currentYear;
   const timelineMax = currentYear;
   const timelineSpan = Math.max(timelineMax - timelineMin, 1);
+  const activeTimelineCount = medTimeline.filter((m) => m.status === "active").length;
+  const completedTimelineCount = medTimeline.filter((m) => m.status === "completed").length;
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 text-white">
@@ -324,56 +329,65 @@ export default function Insights() {
 
         {medTimeline.length > 0 ? (
           <div>
-            {/* Year axis */}
-            <div className="flex items-end mb-2 pl-[200px]">
-              <div className="flex-1 relative h-5">
-                {Array.from({ length: Math.min(Math.ceil(timelineSpan / 5) + 1, 12) }, (_, i) => {
-                  const year = timelineMin + i * Math.max(Math.ceil(timelineSpan / 10) * 2, 1);
-                  if (year > timelineMax + 1) return null;
-                  const pct = ((year - timelineMin) / timelineSpan) * 100;
-                  return (
-                    <span key={year} className="absolute text-[10px] text-zinc-500 -translate-x-1/2" style={{ left: `${pct}%` }}>
-                      {year}
-                    </span>
-                  );
-                })}
-                <span className="absolute text-[10px] text-indigo-400 font-medium -translate-x-1/2" style={{ left: "100%" }}>
-                  {currentYear}
-                </span>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
+                <p className="text-lg font-semibold text-white">{activeTimelineCount}</p>
+                <p className="text-xs text-zinc-500">Active now</p>
+              </div>
+              <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
+                <p className="text-lg font-semibold text-white">{completedTimelineCount}</p>
+                <p className="text-xs text-zinc-500">Completed history</p>
+              </div>
+              <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
+                <p className="text-lg font-semibold text-white">{timelineMin}</p>
+                <p className="text-xs text-zinc-500">Earliest record</p>
               </div>
             </div>
 
-            {/* Medication rows */}
+            <div className="flex justify-between text-[11px] text-zinc-500 mb-2 px-1">
+              <span>History scaled from {timelineMin}</span>
+              <span>Today {currentYear}</span>
+            </div>
+
             <div className="space-y-3">
               {medTimeline.map((med) => {
                 const leftPct = ((med.startYear - timelineMin) / timelineSpan) * 100;
                 const widthPct = Math.max(((med.endYear - med.startYear) / timelineSpan) * 100, 2);
                 const isActive = med.status === "active";
                 return (
-                  <div key={med.fullName} className="flex items-center gap-3">
-                    <div className="w-[188px] shrink-0 text-right">
-                      <p className="text-sm text-zinc-200 truncate" title={med.fullName}>
-                        {med.fullName.length > 28 ? med.fullName.slice(0, 26) + "..." : med.fullName}
-                      </p>
+                  <div key={med.fullName} className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-zinc-100 break-words">{med.fullName}</p>
+                        <p className="text-xs text-zinc-500 mt-0.5">
+                          {med.startYear} - {isActive ? "Present" : med.endYear}
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ring-1 ${
+                          isActive
+                            ? "bg-indigo-500/10 text-indigo-400 ring-indigo-500/30"
+                            : "bg-zinc-700/40 text-zinc-400 ring-zinc-600"
+                        }`}
+                      >
+                        {isActive ? "Active" : "Completed"}
+                      </span>
                     </div>
-                    <div className="flex-1 relative h-8 bg-zinc-800/40 rounded">
+
+                    <div className="relative h-4 bg-zinc-800 rounded-full overflow-hidden">
                       <div
-                        className={`absolute top-1 bottom-1 rounded transition-all ${
+                        className={`absolute top-0 bottom-0 rounded-full transition-all ${
                           isActive ? "bg-indigo-500" : "bg-zinc-600"
                         }`}
                         style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 8 }}
-                        title={`${med.fullName}\n${med.startYear} – ${isActive ? "Present" : med.endYear}\n${med.status}`}
+                        title={`${med.fullName}\n${med.startYear} - ${isActive ? "Present" : med.endYear}\n${med.status}`}
                       />
-                      {/* "Now" marker line */}
                       <div className="absolute top-0 bottom-0 w-px bg-indigo-400/30" style={{ left: "100%" }} />
                     </div>
-                    <div className="w-[120px] shrink-0">
-                      <span className="text-xs text-zinc-400">
-                        {med.startYear} – {isActive ? "Present" : med.endYear}
-                      </span>
-                      <span className={`ml-1.5 text-[10px] ${isActive ? "text-indigo-400" : "text-zinc-500"}`}>
-                        {isActive ? "● Active" : "● Done"}
-                      </span>
+
+                    <div className="mt-2 flex justify-between text-[11px] text-zinc-500">
+                      <span>Started {med.startYear}</span>
+                      <span>{isActive ? `Active in ${currentYear}` : `Last ordered ${med.endYear}`}</span>
                     </div>
                   </div>
                 );
