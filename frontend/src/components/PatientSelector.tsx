@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { API_BASE } from "../api";
 import { usePatient } from "../context/PatientContext";
 
@@ -33,10 +33,12 @@ export default function PatientSelector() {
   const [recent, setRecent] = useState<SearchResult[]>(loadRecent);
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [suggested, setSuggested] = useState<SearchResult[]>([]);
   const ref = useRef<HTMLDivElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout>>();
-  const suggestedLoaded = useRef(false);
+
+  useEffect(() => {
+    if (patient) saveRecent(patient);
+  }, [patient]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -46,39 +48,9 @@ export default function PatientSelector() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const loadSuggested = useCallback(() => {
-    if (suggestedLoaded.current) return;
-    suggestedLoaded.current = true;
-    setSuggested([]);
-    const searches = ["ab", "jo", "ma", "da", "wi"];
-    Promise.all(
-      searches.map((q) =>
-        fetch(`${API_BASE}/api/fhir/patients/search?name=${q}`)
-          .then((r) => r.json())
-          .catch(() => [])
-      )
-    ).then((arrays) => {
-      const seen = new Set<string>();
-      const merged: SearchResult[] = [];
-      for (const arr of arrays) {
-        if (!Array.isArray(arr)) continue;
-        for (const p of arr) {
-          if (!seen.has(p.id)) {
-            seen.add(p.id);
-            merged.push(p);
-          }
-        }
-      }
-      setSuggested(merged.slice(0, 10));
-    });
-  }, []);
-
   function handleOpen() {
     setOpen(!open);
-    if (!open) {
-      setRecent(loadRecent());
-      loadSuggested();
-    }
+    if (!open) setRecent(loadRecent());
   }
 
   function handleSearch(value: string) {
@@ -97,7 +69,7 @@ export default function PatientSelector() {
         })
         .catch(() => setResults([]))
         .finally(() => setSearching(false));
-    }, 250);
+    }, 300);
   }
 
   function selectPatient(p: SearchResult) {
@@ -108,15 +80,7 @@ export default function PatientSelector() {
     setOpen(false);
   }
 
-  const showSearch = query.length >= 1;
-  const displayList = showSearch ? results : recent.length > 0 ? recent : suggested;
-  const sectionLabel = showSearch
-    ? null
-    : recent.length > 0
-      ? "Recent Patients"
-      : suggested.length > 0
-        ? "Suggested Patients"
-        : null;
+  const isSearching = query.length >= 1;
 
   return (
     <div ref={ref} className="relative">
@@ -148,63 +112,75 @@ export default function PatientSelector() {
             />
           </div>
 
-          {searching && (
-            <p className="text-xs text-zinc-500 px-3 pb-2">Searching FHIR server...</p>
+          {/* Recent patients (shown when not searching) */}
+          {!isSearching && recent.length > 0 && (
+            <>
+              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider px-3 pt-1 pb-1">
+                Recent Patients
+              </p>
+              <ul className="max-h-72 overflow-y-auto pb-1">
+                {recent.map((p) => (
+                  <PatientRow key={p.id} p={p} active={p.id === patient?.id} onSelect={selectPatient} />
+                ))}
+              </ul>
+            </>
           )}
 
-          {sectionLabel && !searching && (
-            <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider px-3 pt-1 pb-1">{sectionLabel}</p>
+          {!isSearching && recent.length === 0 && (
+            <p className="text-xs text-zinc-500 px-3 pb-3">
+              Type a patient name to search the FHIR server.
+            </p>
           )}
 
-          {displayList.length > 0 && (
+          {/* Search results */}
+          {isSearching && searching && (
+            <div className="flex items-center gap-2 text-xs text-zinc-500 px-3 py-3">
+              <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Searching FHIR server (may take a moment)...
+            </div>
+          )}
+
+          {isSearching && !searching && results.length > 0 && (
             <ul className="max-h-72 overflow-y-auto pb-1">
-              {displayList.map((p) => {
-                const isActive = p.id === patient?.id;
-                return (
-                  <li key={p.id}>
-                    <button
-                      onClick={() => selectPatient(p)}
-                      className={`w-full text-left px-3 py-2.5 hover:bg-zinc-800 transition-colors ${
-                        isActive ? "bg-zinc-800/60" : ""
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-medium ${isActive ? "text-indigo-400" : "text-zinc-200"}`}>
-                          {p.name}
-                        </span>
-                        {isActive && (
-                          <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded">Active</span>
-                        )}
-                      </div>
-                      <div className="text-xs text-zinc-500 mt-0.5">
-                        {p.gender === "male" ? "Male" : p.gender === "female" ? "Female" : p.gender}
-                        {" · Born "}
-                        {formatDob(p.birthDate)}
-                        <span className="text-zinc-600 ml-1">· ID {p.id.slice(0, 8)}...</span>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
+              {results.map((p) => (
+                <PatientRow key={p.id} p={p} active={p.id === patient?.id} onSelect={selectPatient} />
+              ))}
             </ul>
           )}
 
-          {showSearch && !searching && results.length === 0 && (
-            <p className="text-xs text-zinc-500 px-3 pb-3">No patients found.</p>
-          )}
-
-          {!showSearch && displayList.length === 0 && (
-            <div className="px-3 pb-3 space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse flex flex-col gap-1">
-                  <div className="h-3.5 bg-zinc-800 rounded w-2/3" />
-                  <div className="h-2.5 bg-zinc-800 rounded w-1/2" />
-                </div>
-              ))}
-            </div>
+          {isSearching && !searching && results.length === 0 && (
+            <p className="text-xs text-zinc-500 px-3 pb-3">No patients found for "{query}".</p>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+function PatientRow({ p, active, onSelect }: { p: SearchResult; active: boolean; onSelect: (p: SearchResult) => void }) {
+  return (
+    <li>
+      <button
+        onClick={() => onSelect(p)}
+        className={`w-full text-left px-3 py-2.5 hover:bg-zinc-800 transition-colors ${active ? "bg-zinc-800/60" : ""}`}
+      >
+        <div className="flex items-center justify-between">
+          <span className={`text-sm font-medium ${active ? "text-indigo-400" : "text-zinc-200"}`}>
+            {p.name}
+          </span>
+          {active && (
+            <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded">Active</span>
+          )}
+        </div>
+        <div className="text-xs text-zinc-500 mt-0.5">
+          {p.gender === "male" ? "Male" : p.gender === "female" ? "Female" : p.gender}
+          {" · Born "}
+          {formatDob(p.birthDate)}
+        </div>
+      </button>
+    </li>
   );
 }
