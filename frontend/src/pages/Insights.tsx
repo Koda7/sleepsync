@@ -54,39 +54,61 @@ const TREND_LABELS: Record<string, { label: string; color: string }> = {
   stable: { label: "Stable", color: "text-zinc-300" },
 };
 
+type InsightsCache = {
+  summary: SummaryResponse | null;
+  prediction: PredictionResponse | null;
+  medications: MedicationItem[];
+};
+const cache = new Map<string, InsightsCache>();
+
 export default function Insights() {
   const { patientId } = usePatient();
-  const [summary, setSummary] = useState<SummaryResponse | null>(null);
-  const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
-  const [medications, setMedications] = useState<MedicationItem[]>([]);
-  const [loadingSummary, setLoadingSummary] = useState(true);
-  const [loadingPrediction, setLoadingPrediction] = useState(true);
+  const cached = cache.get(patientId);
+  const [summary, setSummary] = useState<SummaryResponse | null>(cached?.summary ?? null);
+  const [prediction, setPrediction] = useState<PredictionResponse | null>(cached?.prediction ?? null);
+  const [medications, setMedications] = useState<MedicationItem[]>(cached?.medications ?? []);
+  const [loadingSummary, setLoadingSummary] = useState(!cached?.summary);
+  const [loadingPrediction, setLoadingPrediction] = useState(!cached?.prediction);
 
   useEffect(() => {
+    const existing = cache.get(patientId);
+    if (existing) {
+      setSummary(existing.summary);
+      setPrediction(existing.prediction);
+      setMedications(existing.medications);
+      setLoadingSummary(false);
+      setLoadingPrediction(false);
+      return;
+    }
+
     setSummary(null);
     setPrediction(null);
     setMedications([]);
     setLoadingSummary(true);
     setLoadingPrediction(true);
 
+    const entry: InsightsCache = { summary: null, prediction: null, medications: [] };
+
     fetch(`${API_BASE}/api/insights/summary/${patientId}`)
       .then((r) => r.json())
-      .then((d) => { if (d && d.summary) setSummary(d); })
+      .then((d) => { if (d && d.summary) { setSummary(d); entry.summary = d; } })
       .catch(() => {})
       .finally(() => setLoadingSummary(false));
 
     fetch(`${API_BASE}/api/insights/prediction/${patientId}`)
       .then((r) => r.json())
-      .then((d) => { if (d && d.prediction) setPrediction(d); })
+      .then((d) => { if (d && d.prediction) { setPrediction(d); entry.prediction = d; } })
       .catch(() => {})
       .finally(() => setLoadingPrediction(false));
 
     fetch(`${API_BASE}/api/fhir/patient/${patientId}/medications`)
       .then((r) => r.json())
       .then((data: MedicationItem[]) => {
-        if (Array.isArray(data)) setMedications(data);
+        if (Array.isArray(data)) { setMedications(data); entry.medications = data; }
       })
       .catch(() => {});
+
+    cache.set(patientId, entry);
   }, [patientId]);
 
   const risk = prediction?.prediction;
