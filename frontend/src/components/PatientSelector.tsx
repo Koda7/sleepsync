@@ -49,12 +49,28 @@ export default function PatientSelector() {
   const loadSuggested = useCallback(() => {
     if (suggestedLoaded.current) return;
     suggestedLoaded.current = true;
-    fetch(`${API_BASE}/api/fhir/patients/search?name=a`)
-      .then((r) => r.json())
-      .then((data: SearchResult[]) => {
-        if (Array.isArray(data)) setSuggested(data.slice(0, 6));
-      })
-      .catch(() => {});
+    setSuggested([]);
+    const searches = ["ab", "jo", "ma", "da", "wi"];
+    Promise.all(
+      searches.map((q) =>
+        fetch(`${API_BASE}/api/fhir/patients/search?name=${q}`)
+          .then((r) => r.json())
+          .catch(() => [])
+      )
+    ).then((arrays) => {
+      const seen = new Set<string>();
+      const merged: SearchResult[] = [];
+      for (const arr of arrays) {
+        if (!Array.isArray(arr)) continue;
+        for (const p of arr) {
+          if (!seen.has(p.id)) {
+            seen.add(p.id);
+            merged.push(p);
+          }
+        }
+      }
+      setSuggested(merged.slice(0, 10));
+    });
   }, []);
 
   function handleOpen() {
@@ -68,7 +84,7 @@ export default function PatientSelector() {
   function handleSearch(value: string) {
     setQuery(value);
     if (debounce.current) clearTimeout(debounce.current);
-    if (value.length < 2) {
+    if (value.length < 1) {
       setResults([]);
       return;
     }
@@ -77,11 +93,11 @@ export default function PatientSelector() {
       fetch(`${API_BASE}/api/fhir/patients/search?name=${encodeURIComponent(value)}`)
         .then((r) => r.json())
         .then((data: SearchResult[]) => {
-          if (Array.isArray(data)) setResults(data.slice(0, 8));
+          if (Array.isArray(data)) setResults(data.slice(0, 10));
         })
         .catch(() => setResults([]))
         .finally(() => setSearching(false));
-    }, 300);
+    }, 250);
   }
 
   function selectPatient(p: SearchResult) {
@@ -92,7 +108,7 @@ export default function PatientSelector() {
     setOpen(false);
   }
 
-  const showSearch = query.length >= 2;
+  const showSearch = query.length >= 1;
   const displayList = showSearch ? results : recent.length > 0 ? recent : suggested;
   const sectionLabel = showSearch
     ? null
@@ -177,8 +193,15 @@ export default function PatientSelector() {
             <p className="text-xs text-zinc-500 px-3 pb-3">No patients found.</p>
           )}
 
-          {!showSearch && displayList.length === 0 && !searching && (
-            <p className="text-xs text-zinc-500 px-3 pb-3">Type a name to find patients on the FHIR server.</p>
+          {!showSearch && displayList.length === 0 && (
+            <div className="px-3 pb-3 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse flex flex-col gap-1">
+                  <div className="h-3.5 bg-zinc-800 rounded w-2/3" />
+                  <div className="h-2.5 bg-zinc-800 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
