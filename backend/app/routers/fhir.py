@@ -62,15 +62,18 @@ def read_medication_request(medication_request_id: str) -> dict[str, Any]:
 @router.get("/patients/search")
 def search_patients(name: Optional[str] = Query(default=None)) -> list[dict[str, Any]]:
     raw = fhir_client.search_patients(name=name)
-    return [
-        {
+    results = []
+    for p in raw:
+        formatted = _format_name(p)
+        if formatted == "Unknown" or not p.get("birthDate"):
+            continue
+        results.append({
             "id": p["id"],
-            "name": _format_name(p),
+            "name": formatted,
             "birthDate": p.get("birthDate"),
             "gender": p.get("gender"),
-        }
-        for p in raw
-    ]
+        })
+    return results
 
 
 def _format_name(patient: dict[str, Any]) -> str:
@@ -80,7 +83,7 @@ def _format_name(patient: dict[str, Any]) -> str:
     n = names[0]
     given = " ".join(n.get("given", []))
     family = n.get("family", "")
-    return f"{given} {family}".strip()
+    return f"{given} {family}".strip() or "Unknown"
 
 
 def _codeable_concept_text(concept: Optional[dict[str, Any]]) -> str:
