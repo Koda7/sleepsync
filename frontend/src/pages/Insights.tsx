@@ -55,11 +55,24 @@ type InsightsCache = {
   prediction: PredictionResponse | null;
   medications: MedicationItem[];
 };
-const cache = new Map<string, InsightsCache>();
+
+const CACHE_PREFIX = "insights_";
+
+function readCache(patientId: string): InsightsCache | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + patientId);
+    if (!raw) return null;
+    return JSON.parse(raw) as InsightsCache;
+  } catch { return null; }
+}
+
+function writeCache(patientId: string, data: InsightsCache) {
+  try { sessionStorage.setItem(CACHE_PREFIX + patientId, JSON.stringify(data)); } catch {}
+}
 
 export default function Insights() {
   const { patientId } = usePatient();
-  const cached = cache.get(patientId);
+  const cached = readCache(patientId);
   const [summary, setSummary] = useState<SummaryResponse | null>(cached?.summary ?? null);
   const [prediction, setPrediction] = useState<PredictionResponse | null>(cached?.prediction ?? null);
   const [medications, setMedications] = useState<MedicationItem[]>(cached?.medications ?? []);
@@ -67,8 +80,8 @@ export default function Insights() {
   const [loadingPrediction, setLoadingPrediction] = useState(!cached?.prediction);
 
   useEffect(() => {
-    const existing = cache.get(patientId);
-    if (existing) {
+    const existing = readCache(patientId);
+    if (existing?.summary && existing?.prediction) {
       setSummary(existing.summary);
       setPrediction(existing.prediction);
       setMedications(existing.medications);
@@ -87,24 +100,22 @@ export default function Insights() {
 
     fetch(`${API_BASE}/api/insights/summary/${patientId}`)
       .then((r) => r.json())
-      .then((d) => { if (d && d.summary) { setSummary(d); entry.summary = d; } })
+      .then((d) => { if (d && d.summary) { setSummary(d); entry.summary = d; writeCache(patientId, entry); } })
       .catch(() => {})
       .finally(() => setLoadingSummary(false));
 
     fetch(`${API_BASE}/api/insights/prediction/${patientId}`)
       .then((r) => r.json())
-      .then((d) => { if (d && d.prediction) { setPrediction(d); entry.prediction = d; } })
+      .then((d) => { if (d && d.prediction) { setPrediction(d); entry.prediction = d; writeCache(patientId, entry); } })
       .catch(() => {})
       .finally(() => setLoadingPrediction(false));
 
     fetch(`${API_BASE}/api/fhir/patient/${patientId}/medications`)
       .then((r) => r.json())
       .then((data: MedicationItem[]) => {
-        if (Array.isArray(data)) { setMedications(data); entry.medications = data; }
+        if (Array.isArray(data)) { setMedications(data); entry.medications = data; writeCache(patientId, entry); }
       })
       .catch(() => {});
-
-    cache.set(patientId, entry);
   }, [patientId]);
 
   const risk = prediction?.prediction;
