@@ -148,8 +148,22 @@ def _medication_request_summary(m: dict[str, Any]) -> dict[str, Any]:
         "status": m.get("status"),
         "intent": m.get("intent"),
         "authoredOn": m.get("authoredOn"),
+        "validityStart": _medication_validity_start(m),
+        "validityEnd": _medication_validity_end(m),
         "dosage": _dosage_text(m),
     }
+
+
+def _medication_validity_start(med_request: dict[str, Any]) -> Optional[str]:
+    dispense = med_request.get("dispenseRequest") or {}
+    validity = dispense.get("validityPeriod") or {}
+    return validity.get("start")
+
+
+def _medication_validity_end(med_request: dict[str, Any]) -> Optional[str]:
+    dispense = med_request.get("dispenseRequest") or {}
+    validity = dispense.get("validityPeriod") or {}
+    return validity.get("end")
 
 
 def _dosage_text(med_request: dict[str, Any]) -> str:

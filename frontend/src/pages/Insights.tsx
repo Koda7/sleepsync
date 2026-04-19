@@ -1,12 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { API_BASE } from "../api";
 import { usePatient } from "../context/PatientContext";
 
 type SummaryResponse = {
   patient_id: string;
   patient_name: string;
-  summary: string;
+  summary: string | null;
   stats: {
     total_logs: number;
     avg_hours: number;
@@ -27,7 +38,7 @@ type PredictionResponse = {
     top_factors: string[];
     model_type: string;
     model_accuracy: number;
-  };
+  } | null;
   features_used: number;
 };
 
@@ -35,8 +46,26 @@ type MedicationItem = {
   id: string;
   medication: string;
   status: string;
-  authoredOn: string;
+  authoredOn?: string | null;
   dosage: string;
+  intent?: string | null;
+  validityStart?: string | null;
+  validityEnd?: string | null;
+};
+
+type MedicationCourse = {
+  key: string;
+  label: string;
+  fullName: string;
+  dosage: string;
+  intent?: string | null;
+  status: "active" | "completed";
+  startMs: number;
+  endMs: number;
+  latestOrderMs: number;
+  orderCount: number;
+  offset: number;
+  duration: number;
 };
 
 const RISK_COLORS: Record<string, { bg: string; text: string; ring: string }> = {
@@ -58,6 +87,8 @@ type InsightsCache = {
 };
 
 const CACHE_PREFIX = "insights_";
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MIN_BAR_MS = 45 * DAY_MS;
 
 function readCache(patientId: string): InsightsCache | null {
   try {
@@ -69,6 +100,35 @@ function readCache(patientId: string): InsightsCache | null {
 
 function writeCache(patientId: string, data: InsightsCache) {
   try { sessionStorage.setItem(CACHE_PREFIX + patientId, JSON.stringify(data)); } catch {}
+}
+
+function parseDate(value?: string | null): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function formatMonthYear(value?: number | null) {
+  if (!value) return "Unknown";
+  return new Date(value).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+function formatYear(value: number) {
+  return String(new Date(value).getFullYear());
+}
+
+function startOfYearMs(value: number) {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), 0, 1).getTime();
+}
+
+function endOfYearMs(value: number) {
+  const date = new Date(value);
+  return new Date(date.getFullYear() + 1, 0, 1).getTime();
+}
+
+function medicationLabel(name: string) {
+  return name.length > 28 ? `${name.slice(0, 26)}...` : name;
 }
 
 export default function Insights() {
@@ -86,43 +146,65 @@ export default function Insights() {
       existing?.summary?.summary &&
       existing?.prediction?.prediction &&
       (existing?.summary?.stats?.total_logs ?? 0) > 0;
+
     if (hasRealData) {
       setSummary(existing.summary);
       setPrediction(existing.prediction);
-      setMedications(existing.medications);
+      setMedications(existing.medications ?? []);
       setLoadingSummary(false);
       setLoadingPrediction(false);
-      return;
+    } else {
+      setSummary(null);
+      setPrediction(null);
+      setMedications(existing?.medications ?? []);
+      setLoadingSummary(true);
+      setLoadingPrediction(true);
+
+      const entry: InsightsCache = {
+        summary: existing?.summary ?? null,
+        prediction: existing?.prediction ?? null,
+        medications: existing?.medications ?? [],
+      };
+
+      fetch(`${API_BASE}/api/insights/summary/${patientId}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d) {
+            setSummary(d.summary ? d : null);
+            entry.summary = d.summary ? d : null;
+            writeCache(patientId, entry);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingSummary(false));
+
+      fetch(`${API_BASE}/api/insights/prediction/${patientId}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d) {
+            setPrediction(d.prediction ? d : null);
+            entry.prediction = d.prediction ? d : null;
+            writeCache(patientId, entry);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingPrediction(false));
     }
 
-    setSummary(null);
-    setPrediction(null);
-    setMedications([]);
-    setLoadingSummary(true);
-    setLoadingPrediction(true);
-
-    const entry: InsightsCache = { summary: null, prediction: null, medications: [] };
-
-    fetch(`${API_BASE}/api/insights/summary/${patientId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d) { setSummary(d.summary ? d : null); entry.summary = d.summary ? d : null; writeCache(patientId, entry); }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingSummary(false));
-
-    fetch(`${API_BASE}/api/insights/prediction/${patientId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d) { setPrediction(d.prediction ? d : null); entry.prediction = d.prediction ? d : null; writeCache(patientId, entry); }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingPrediction(false));
+    const medEntry: InsightsCache = {
+      summary: existing?.summary ?? null,
+      prediction: existing?.prediction ?? null,
+      medications: existing?.medications ?? [],
+    };
 
     fetch(`${API_BASE}/api/fhir/patient/${patientId}/medications`)
       .then((r) => r.json())
       .then((data: MedicationItem[]) => {
-        if (Array.isArray(data)) { setMedications(data); entry.medications = data; writeCache(patientId, entry); }
+        if (Array.isArray(data)) {
+          setMedications(data);
+          medEntry.medications = data;
+          writeCache(patientId, medEntry);
+        }
       })
       .catch(() => {});
   }, [patientId]);
@@ -131,47 +213,101 @@ export default function Insights() {
   const riskStyle = RISK_COLORS[risk?.risk_level ?? "moderate"];
   const stats = summary?.stats;
   const trendInfo = TREND_LABELS[stats?.trend ?? "stable"];
+  const nowMs = Date.now();
 
-  const activeMeds = medications
-    .filter((m) => m.status === "active" && m.medication !== "Unknown")
-    .reduce<MedicationItem[]>((acc, m) => {
-      if (!acc.find((x) => x.medication === m.medication)) acc.push(m);
-      return acc;
-    }, []);
+  const medTimeline = useMemo<MedicationCourse[]>(() => {
+    const grouped = new Map<string, {
+      fullName: string;
+      dosage: string;
+      intent?: string | null;
+      hasActive: boolean;
+      startMs: number;
+      latestOrderMs: number;
+      explicitEndMs: number | null;
+      orderCount: number;
+    }>();
 
-  const currentYear = new Date().getFullYear();
-  const medTimeline = (() => {
-    const grouped = new Map<string, { fullName: string; startYear: number; endYear: number; hasActive: boolean }>();
-    for (const m of medications) {
-      if (m.medication === "Unknown" || !m.authoredOn) continue;
-      const fullName = m.medication;
-      const year = new Date(m.authoredOn).getFullYear();
-      const existing = grouped.get(fullName);
+    for (const med of medications) {
+      if (!med.medication || med.medication === "Unknown") continue;
+
+      const authoredMs = parseDate(med.authoredOn);
+      const validityStartMs = parseDate(med.validityStart);
+      const validityEndMs = parseDate(med.validityEnd);
+      const startMs = validityStartMs ?? authoredMs ?? validityEndMs;
+      const eventMs = authoredMs ?? validityStartMs ?? validityEndMs;
+
+      if (!startMs && !eventMs && !validityEndMs) continue;
+
+      const key = `${med.medication}__${med.dosage || ""}`;
+      const existing = grouped.get(key);
+      const resolvedStartMs = startMs ?? eventMs ?? validityEndMs ?? nowMs;
+      const resolvedEventMs = eventMs ?? validityEndMs ?? resolvedStartMs;
+
       if (existing) {
-        existing.startYear = Math.min(existing.startYear, year);
-        existing.endYear = Math.max(existing.endYear, year);
-        if (m.status === "active") existing.hasActive = true;
+        existing.startMs = Math.min(existing.startMs, resolvedStartMs);
+        existing.latestOrderMs = Math.max(existing.latestOrderMs, resolvedEventMs);
+        existing.orderCount += 1;
+        if (validityEndMs != null) {
+          existing.explicitEndMs = existing.explicitEndMs == null
+            ? validityEndMs
+            : Math.max(existing.explicitEndMs, validityEndMs);
+        }
+        if (med.status === "active") existing.hasActive = true;
+        if (!existing.intent && med.intent) existing.intent = med.intent;
       } else {
-        grouped.set(fullName, { fullName, startYear: year, endYear: year, hasActive: m.status === "active" });
+        grouped.set(key, {
+          fullName: med.medication,
+          dosage: med.dosage || "",
+          intent: med.intent,
+          hasActive: med.status === "active",
+          startMs: resolvedStartMs,
+          latestOrderMs: resolvedEventMs,
+          explicitEndMs: validityEndMs ?? null,
+          orderCount: 1,
+        });
       }
     }
-    return [...grouped.values()]
-      .map((g) => ({
-        fullName: g.fullName,
-        startYear: g.startYear,
-        endYear: g.hasActive ? currentYear : g.endYear,
-        status: g.hasActive ? "active" as const : "completed" as const,
-      }))
+
+    return [...grouped.entries()]
+      .map(([key, group]) => {
+        const status = group.hasActive ? "active" as const : "completed" as const;
+        const rawEndMs = group.explicitEndMs ?? (status === "active" ? nowMs : group.latestOrderMs);
+        const endMs = Math.max(rawEndMs, group.startMs + DAY_MS);
+
+        return {
+          key,
+          label: medicationLabel(group.fullName),
+          fullName: group.fullName,
+          dosage: group.dosage,
+          intent: group.intent,
+          status,
+          startMs: group.startMs,
+          endMs,
+          latestOrderMs: group.latestOrderMs,
+          orderCount: group.orderCount,
+          offset: group.startMs,
+          duration: Math.max(endMs - group.startMs, MIN_BAR_MS),
+        };
+      })
       .sort((a, b) => {
         if (a.status !== b.status) return a.status === "active" ? -1 : 1;
-        return a.startYear - b.startYear;
+        return b.latestOrderMs - a.latestOrderMs;
       });
-  })();
-  const timelineMin = medTimeline.length > 0 ? Math.min(...medTimeline.map((m) => m.startYear)) : currentYear;
-  const timelineMax = currentYear;
-  const timelineSpan = Math.max(timelineMax - timelineMin, 1);
-  const activeTimelineCount = medTimeline.filter((m) => m.status === "active").length;
+  }, [medications, nowMs]);
+
+  const activeMeds = medTimeline.filter((m) => m.status === "active");
+  const activeTimelineCount = activeMeds.length;
   const completedTimelineCount = medTimeline.filter((m) => m.status === "completed").length;
+  const totalOrderCount = medTimeline.reduce((sum, med) => sum + med.orderCount, 0);
+  const latestMedicationOrderMs = medTimeline.length > 0
+    ? Math.max(...medTimeline.map((m) => m.latestOrderMs))
+    : null;
+  const timelineMin = medTimeline.length > 0
+    ? startOfYearMs(Math.min(...medTimeline.map((m) => m.startMs)))
+    : startOfYearMs(nowMs);
+  const timelineMax = medTimeline.length > 0
+    ? endOfYearMs(Math.max(nowMs, ...medTimeline.map((m) => m.endMs)))
+    : endOfYearMs(nowMs);
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 text-white">
@@ -363,70 +499,86 @@ export default function Insights() {
 
         {medTimeline.length > 0 ? (
           <div>
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
               <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
                 <p className="text-lg font-semibold text-white">{activeTimelineCount}</p>
                 <p className="text-xs text-zinc-500">Active now</p>
               </div>
               <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
                 <p className="text-lg font-semibold text-white">{completedTimelineCount}</p>
-                <p className="text-xs text-zinc-500">Completed history</p>
+                <p className="text-xs text-zinc-500">Completed courses</p>
               </div>
               <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
-                <p className="text-lg font-semibold text-white">{timelineMin}</p>
-                <p className="text-xs text-zinc-500">Earliest record</p>
+                <p className="text-lg font-semibold text-white">{totalOrderCount}</p>
+                <p className="text-xs text-zinc-500">Prescription orders</p>
+              </div>
+              <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
+                <p className="text-lg font-semibold text-white">
+                  {latestMedicationOrderMs ? formatMonthYear(latestMedicationOrderMs) : "—"}
+                </p>
+                <p className="text-xs text-zinc-500">Latest order</p>
               </div>
             </div>
 
-            <div className="flex justify-between text-[11px] text-zinc-500 mb-2 px-1">
-              <span>History scaled from {timelineMin}</span>
-              <span>Today {currentYear}</span>
-            </div>
+            <ResponsiveContainer width="100%" height={Math.max(medTimeline.length * 54 + 42, 180)}>
+              <BarChart data={medTimeline} layout="vertical" margin={{ left: 8, right: 20, top: 6, bottom: 6 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" horizontal={false} />
+                <XAxis
+                  type="number"
+                  domain={[timelineMin, timelineMax]}
+                  tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                  tickFormatter={(value) => formatYear(Number(value))}
+                  allowDecimals={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  tick={{ fill: "#d4d4d8", fontSize: 11 }}
+                  width={190}
+                  interval={0}
+                />
+                <Tooltip
+                  cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                  content={({ active, payload }) => {
+                    const course = payload?.find((item) => item.dataKey === "duration")?.payload as MedicationCourse | undefined;
+                    if (!active || !course) return null;
 
-            <div className="space-y-3">
-              {medTimeline.map((med) => {
-                const leftPct = ((med.startYear - timelineMin) / timelineSpan) * 100;
-                const widthPct = Math.max(((med.endYear - med.startYear) / timelineSpan) * 100, 2);
-                const isActive = med.status === "active";
-                return (
-                  <div key={med.fullName} className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-zinc-100 break-words">{med.fullName}</p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          {med.startYear} - {isActive ? "Present" : med.endYear}
-                        </p>
+                    return (
+                      <div className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 shadow-lg max-w-xs">
+                        <p className="text-sm font-medium text-white break-words">{course.fullName}</p>
+                        {course.dosage && (
+                          <p className="text-xs text-zinc-400 mt-1">{course.dosage}</p>
+                        )}
+                        <div className="mt-2 space-y-1 text-xs text-zinc-300">
+                          <p>
+                            {formatMonthYear(course.startMs)} - {course.status === "active" ? "Present" : formatMonthYear(course.endMs)}
+                          </p>
+                          <p>Orders recorded: {course.orderCount}</p>
+                          <p>Latest order: {formatMonthYear(course.latestOrderMs)}</p>
+                          {course.intent && <p>Intent: {course.intent}</p>}
+                        </div>
                       </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ring-1 ${
-                          isActive
-                            ? "bg-indigo-500/10 text-indigo-400 ring-indigo-500/30"
-                            : "bg-zinc-700/40 text-zinc-400 ring-zinc-600"
-                        }`}
-                      >
-                        {isActive ? "Active" : "Completed"}
-                      </span>
-                    </div>
+                    );
+                  }}
+                />
+                <ReferenceLine
+                  x={nowMs}
+                  stroke="#818cf8"
+                  strokeDasharray="3 3"
+                  label={{ value: "Now", fill: "#818cf8", fontSize: 10 }}
+                />
+                <Bar dataKey="offset" stackId="timeline" fill="transparent" barSize={20} />
+                <Bar dataKey="duration" stackId="timeline" radius={[0, 6, 6, 0]} barSize={20}>
+                  {medTimeline.map((entry) => (
+                    <Cell key={entry.key} fill={entry.status === "active" ? "#818cf8" : "#52525b"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
 
-                    <div className="relative h-4 bg-zinc-800 rounded-full overflow-hidden">
-                      <div
-                        className={`absolute top-0 bottom-0 rounded-full transition-all ${
-                          isActive ? "bg-indigo-500" : "bg-zinc-600"
-                        }`}
-                        style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 8 }}
-                        title={`${med.fullName}\n${med.startYear} - ${isActive ? "Present" : med.endYear}\n${med.status}`}
-                      />
-                      <div className="absolute top-0 bottom-0 w-px bg-indigo-400/30" style={{ left: "100%" }} />
-                    </div>
-
-                    <div className="mt-2 flex justify-between text-[11px] text-zinc-500">
-                      <span>Started {med.startYear}</span>
-                      <span>{isActive ? `Active in ${currentYear}` : `Last ordered ${med.endYear}`}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <p className="text-[11px] text-zinc-500 mt-4">
+              Rows group recurring orders with the same medication and dosage so refill-heavy histories stay readable.
+            </p>
           </div>
         ) : (
           <p className="text-zinc-500 text-sm py-4">No medication data available.</p>
@@ -444,16 +596,24 @@ export default function Insights() {
                   <th className="text-left py-2 pr-4">Medication</th>
                   <th className="text-left py-2 pr-4">Dosage</th>
                   <th className="text-left py-2 pr-4">Since</th>
+                  <th className="text-left py-2 pr-4">Latest Order</th>
+                  <th className="text-left py-2 pr-4">Orders</th>
                   <th className="text-left py-2">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {activeMeds.map((m) => (
-                  <tr key={m.id} className="border-b border-zinc-800 last:border-0">
-                    <td className="py-3 pr-4 text-zinc-200">{m.medication}</td>
+                  <tr key={m.key} className="border-b border-zinc-800 last:border-0">
+                    <td className="py-3 pr-4 text-zinc-200">{m.fullName}</td>
                     <td className="py-3 pr-4 text-zinc-400">{m.dosage || "—"}</td>
                     <td className="py-3 pr-4 text-zinc-400">
-                      {m.authoredOn ? new Date(m.authoredOn).getFullYear() : "—"}
+                      {formatMonthYear(m.startMs)}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-400">
+                      {formatMonthYear(m.latestOrderMs)}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-400">
+                      {m.orderCount}
                     </td>
                     <td className="py-3">
                       <span className="bg-emerald-500/10 text-emerald-400 text-xs px-2 py-0.5 rounded-full ring-1 ring-emerald-500/30">
