@@ -11,8 +11,19 @@ type FormState = {
   trouble_falling_asleep: boolean;
   woke_too_early: boolean;
   stress_level: number;
+  activity: string;
   notes: string;
 };
+
+const ACTIVITY_OPTIONS = [
+  "",
+  "No exercise",
+  "Light walk",
+  "Moderate exercise",
+  "Intense workout",
+  "Yoga / stretching",
+  "Other",
+] as const;
 
 export default function SleepLog() {
   const { patientId } = usePatient();
@@ -24,6 +35,7 @@ export default function SleepLog() {
     trouble_falling_asleep: false,
     woke_too_early: false,
     stress_level: 3,
+    activity: "",
     notes: "",
   });
 
@@ -37,7 +49,7 @@ export default function SleepLog() {
       const res = await fetch(`${API_BASE}/api/sleep-logs/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, patient_id: patientId }),
+        body: JSON.stringify({ ...form, patient_id: patientId, activity: form.activity || null }),
       });
       if (!res.ok) throw new Error();
       try { sessionStorage.removeItem(`insights_${patientId}`); } catch {}
@@ -162,6 +174,22 @@ export default function SleepLog() {
             <span>Low</span>
             <span>High</span>
           </div>
+        </div>
+
+        {/* Activity */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Activity Before Bed (optional)</label>
+          <select
+            value={form.activity}
+            onChange={(e) => setForm({ ...form, activity: e.target.value })}
+            className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 [color-scheme:dark]"
+          >
+            {ACTIVITY_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt || "— Select activity —"}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Notes */}

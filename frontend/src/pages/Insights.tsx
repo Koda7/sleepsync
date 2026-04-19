@@ -68,6 +68,20 @@ type MedicationCourse = {
   duration: number;
 };
 
+const TIMELINE_COPY = {
+  currentLegend: "Current",
+  earlierLegend: "Earlier",
+  currentCount: "Current meds",
+  earlierCount: "Earlier meds",
+  ordersCount: "Orders on record",
+  latestOrder: "Latest order",
+  tableTitle: "Medications marked current in the record",
+  tableStatusHeader: "Record status",
+  tableCurrentBadge: "Current",
+  currentStatus: "Current in record",
+  earlierStatus: "No current order in record",
+};
+
 const RISK_COLORS: Record<string, { bg: string; text: string; ring: string }> = {
   low: { bg: "bg-emerald-500/10", text: "text-emerald-400", ring: "ring-emerald-500/30" },
   moderate: { bg: "bg-amber-500/10", text: "text-amber-400", ring: "ring-amber-500/30" },
@@ -489,10 +503,10 @@ export default function Insights() {
           </div>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-xs text-zinc-400">
-              <span className="w-2.5 h-2.5 rounded-sm bg-indigo-500" /> Active
+              <span className="w-2.5 h-2.5 rounded-sm bg-indigo-500" /> {TIMELINE_COPY.currentLegend}
             </span>
             <span className="flex items-center gap-1.5 text-xs text-zinc-400">
-              <span className="w-2.5 h-2.5 rounded-sm bg-zinc-600" /> Completed
+              <span className="w-2.5 h-2.5 rounded-sm bg-zinc-600" /> {TIMELINE_COPY.earlierLegend}
             </span>
           </div>
         </div>
@@ -502,21 +516,21 @@ export default function Insights() {
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
               <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
                 <p className="text-lg font-semibold text-white">{activeTimelineCount}</p>
-                <p className="text-xs text-zinc-500">Active now</p>
+                <p className="text-xs text-zinc-500">{TIMELINE_COPY.currentCount}</p>
               </div>
               <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
                 <p className="text-lg font-semibold text-white">{completedTimelineCount}</p>
-                <p className="text-xs text-zinc-500">Completed courses</p>
+                <p className="text-xs text-zinc-500">{TIMELINE_COPY.earlierCount}</p>
               </div>
               <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
                 <p className="text-lg font-semibold text-white">{totalOrderCount}</p>
-                <p className="text-xs text-zinc-500">Prescription orders</p>
+                <p className="text-xs text-zinc-500">{TIMELINE_COPY.ordersCount}</p>
               </div>
               <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
                 <p className="text-lg font-semibold text-white">
                   {latestMedicationOrderMs ? formatMonthYear(latestMedicationOrderMs) : "—"}
                 </p>
-                <p className="text-xs text-zinc-500">Latest order</p>
+                <p className="text-xs text-zinc-500">{TIMELINE_COPY.latestOrder}</p>
               </div>
             </div>
 
@@ -550,12 +564,15 @@ export default function Insights() {
                           <p className="text-xs text-zinc-400 mt-1">{course.dosage}</p>
                         )}
                         <div className="mt-2 space-y-1 text-xs text-zinc-300">
-                          <p>
-                            {formatMonthYear(course.startMs)} - {course.status === "active" ? "Present" : formatMonthYear(course.endMs)}
+                          <p className={course.status === "active" ? "text-indigo-300" : "text-zinc-300"}>
+                            {course.status === "active" ? TIMELINE_COPY.currentStatus : TIMELINE_COPY.earlierStatus}
                           </p>
-                          <p>Orders recorded: {course.orderCount}</p>
-                          <p>Latest order: {formatMonthYear(course.latestOrderMs)}</p>
-                          {course.intent && <p>Intent: {course.intent}</p>}
+                          <p>
+                            Span shown: {formatMonthYear(course.startMs)} - {course.status === "active" ? "Today" : formatMonthYear(course.endMs)}
+                          </p>
+                          <p>Orders in this row: {course.orderCount}</p>
+                          <p>Latest recorded order: {formatMonthYear(course.latestOrderMs)}</p>
+                          {course.intent && <p>Request type: {course.intent}</p>}
                         </div>
                       </div>
                     );
@@ -577,7 +594,7 @@ export default function Insights() {
             </ResponsiveContainer>
 
             <p className="text-[11px] text-zinc-500 mt-4">
-              Rows group recurring orders with the same medication and dosage so refill-heavy histories stay readable.
+              Each row combines matching medication orders for the same medication and dosage. Bars show the first and last dates found in the record, and current rows extend to today.
             </p>
           </div>
         ) : (
@@ -588,17 +605,17 @@ export default function Insights() {
       {/* Active Medications Table */}
       {activeMeds.length > 0 && (
         <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6">
-          <h2 className="font-semibold mb-4">Current Active Medications</h2>
+          <h2 className="font-semibold mb-4">{TIMELINE_COPY.tableTitle}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-zinc-400 text-xs uppercase tracking-wider border-b border-zinc-700">
                   <th className="text-left py-2 pr-4">Medication</th>
                   <th className="text-left py-2 pr-4">Dosage</th>
-                  <th className="text-left py-2 pr-4">Since</th>
+                  <th className="text-left py-2 pr-4">First record</th>
                   <th className="text-left py-2 pr-4">Latest Order</th>
                   <th className="text-left py-2 pr-4">Orders</th>
-                  <th className="text-left py-2">Status</th>
+                  <th className="text-left py-2">{TIMELINE_COPY.tableStatusHeader}</th>
                 </tr>
               </thead>
               <tbody>
@@ -617,7 +634,7 @@ export default function Insights() {
                     </td>
                     <td className="py-3">
                       <span className="bg-emerald-500/10 text-emerald-400 text-xs px-2 py-0.5 rounded-full ring-1 ring-emerald-500/30">
-                        {m.status}
+                        {TIMELINE_COPY.tableCurrentBadge}
                       </span>
                     </td>
                   </tr>

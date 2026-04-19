@@ -14,6 +14,7 @@ class SleepLog(Base):
     quality = Column(Integer, nullable=False)  # 1-5 scale
     stress_level = Column(Integer, nullable=True)  # 1-5 scale
     notes = Column(Text, nullable=True)
+    activity = Column(String, nullable=True)
 
     woke_during_night = Column(Integer, default=0)
     trouble_falling_asleep = Column(Integer, default=0)

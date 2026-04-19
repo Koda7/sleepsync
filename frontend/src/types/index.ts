@@ -6,6 +6,7 @@ export type SleepLog = {
   quality: number;
   stress_level: number;
   notes: string;
+  activity: string | null;
   woke_during_night: boolean;
   trouble_falling_asleep: boolean;
   woke_too_early: boolean;

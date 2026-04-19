@@ -10,6 +10,7 @@ class SleepLogCreate(BaseModel):
     quality: int = Field(ge=1, le=5)
     stress_level: Optional[int] = Field(default=None, ge=1, le=5)
     notes: Optional[str] = None
+    activity: Optional[str] = None
     woke_during_night: bool = False
     trouble_falling_asleep: bool = False
     woke_too_early: bool = False
@@ -20,6 +21,7 @@ class SleepLogUpdate(BaseModel):
     quality: Optional[int] = Field(default=None, ge=1, le=5)
     stress_level: Optional[int] = Field(default=None, ge=1, le=5)
     notes: Optional[str] = None
+    activity: Optional[str] = None
     woke_during_night: Optional[bool] = None
     trouble_falling_asleep: Optional[bool] = None
     woke_too_early: Optional[bool] = None
@@ -33,6 +35,7 @@ class SleepLogResponse(BaseModel):
     quality: int
     stress_level: Optional[int]
     notes: Optional[str]
+    activity: Optional[str]
     woke_during_night: bool
     trouble_falling_asleep: bool
     woke_too_early: bool

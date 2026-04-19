@@ -19,6 +19,7 @@ def create_sleep_log(payload: SleepLogCreate, db: Session = Depends(get_db)):
         quality=payload.quality,
         stress_level=payload.stress_level,
         notes=payload.notes,
+        activity=payload.activity,
         woke_during_night=int(payload.woke_during_night),
         trouble_falling_asleep=int(payload.trouble_falling_asleep),
         woke_too_early=int(payload.woke_too_early),

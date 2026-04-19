@@ -32,6 +32,7 @@ export default function SleepLogTable({ logs, onDelete, formatDate }: Props) {
               <th className="pb-2 pr-4 font-medium">Woke at Night</th>
               <th className="pb-2 pr-4 font-medium">Trouble Falling</th>
               <th className="pb-2 pr-4 font-medium">Woke Early</th>
+              <th className="pb-2 pr-4 font-medium">Activity</th>
               <th className="pb-2 font-medium w-16"></th>
             </tr>
           </thead>
@@ -48,6 +49,7 @@ export default function SleepLogTable({ logs, onDelete, formatDate }: Props) {
                 <td className="py-2 pr-4">{log.woke_during_night ? "Yes" : "No"}</td>
                 <td className="py-2 pr-4">{log.trouble_falling_asleep ? "Yes" : "No"}</td>
                 <td className="py-2 pr-4">{log.woke_too_early ? "Yes" : "No"}</td>
+                <td className="py-2 pr-4 text-zinc-400">{log.activity ?? "—"}</td>
                 <td className="py-2 text-right">
                   <button
                     onClick={() => onDelete(log.id)}
