@@ -333,12 +333,7 @@ export default function Insights() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
         {/* AI Summary + Stats */}
         <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">AI Sleep Summary</h2>
-            <span className="text-xs bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full ring-1 ring-indigo-500/30">
-              Llama 3.2
-            </span>
-          </div>
+          <h2 className="font-semibold mb-4">AI Sleep Summary</h2>
 
           {loadingSummary ? (
             <div className="flex items-center gap-2 text-zinc-400 text-sm py-8">
@@ -405,14 +400,7 @@ export default function Insights() {
 
         {/* ML Prediction / Risk Card */}
         <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Sleep Quality Prediction</h2>
-            {risk && (
-              <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
-                {risk.model_type} · {(risk.model_accuracy * 100).toFixed(0)}% accuracy
-              </span>
-            )}
-          </div>
+          <h2 className="font-semibold mb-4">Sleep Quality Prediction</h2>
 
           {loadingPrediction ? (
             <div className="flex items-center gap-2 text-zinc-400 text-sm py-8">
@@ -434,34 +422,14 @@ export default function Insights() {
                 </div>
 
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="mb-2">
                     <span className={`text-sm font-semibold uppercase ${riskStyle.text}`}>
                       {risk.risk_level} risk
-                    </span>
-                    <span className="text-xs text-zinc-500">
-                      {(risk.confidence * 100).toFixed(0)}% confidence
                     </span>
                   </div>
                   <p className="text-zinc-400 text-sm">
                     Based on {prediction?.features_used ?? 0} features from sleep logs, FHIR conditions, medications, and demographics.
                   </p>
-                </div>
-              </div>
-
-              {/* Confidence bar */}
-              <div className="mb-6">
-                <div className="flex justify-between text-xs text-zinc-500 mb-1">
-                  <span>Model confidence</span>
-                  <span>{(risk.confidence * 100).toFixed(0)}%</span>
-                </div>
-                <div className="w-full bg-zinc-800 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all ${
-                      risk.risk_level === "low" ? "bg-emerald-500" :
-                      risk.risk_level === "moderate" ? "bg-amber-500" : "bg-red-500"
-                    }`}
-                    style={{ width: `${risk.confidence * 100}%` }}
-                  />
                 </div>
               </div>
 
